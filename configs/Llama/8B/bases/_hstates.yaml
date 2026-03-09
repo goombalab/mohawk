@@ -1,0 +1,59 @@
+LOAD: 
+- ./configs/Llama/8B/bases/load.yaml
+- ./configs/Llama/8B/bases/teacher.yaml
+- ./configs/Llama/8B/bases/optimizer.yaml
+- ./configs/Llama/8B/bases/train.yaml
+- ./configs/management.yaml
+
+DistillConfig:
+  type: hstates
+
+OptimizerConfig:
+  lr: 1.0e-04
+
+TrainConfig:
+  n_tokens: !!float 5e9
+
+TrainDataConfig:
+  loaders: [RoundRobinLoader, PackingDataLoader, TorchDataLoader]
+  RoundRobinLoader:
+    train_data_configs:
+    - !load_yaml ./configs/data/fineweb_edu.yaml
+    - !load_yaml ./configs/data/finemath.yaml
+  PackingDataLoader:
+    max_seq_len: 2048
+  TorchDataLoader:
+    num_workers: 0
+    batch_size: 16
+
+EvalConfig:
+
+- Evaluation: eval_ppl
+  frequency: 1000
+  mixed_precision: true
+  eval_at_start: true
+  eval_at_end: true
+  save_latest: false
+  n_batches: 200
+  eval_type: last_token # or all_tokens
+  DataConfig:
+    loaders: [RoundRobinLoader, PaddingDataLoader, TorchDataLoader]
+    RoundRobinLoader:
+      train_data_configs:
+        - !load_yaml ./configs/data/kv_retrieval.yaml
+    PaddingDataLoader:
+      max_seq_len: 1024
+    TorchDataLoader:
+      num_workers: 0
+      batch_size: 8
+
+- Evaluation: benchmark
+  frequency: 1000
+  batch_size: 16
+  max_length: 4096
+  eval_at_start: true
+  eval_at_end: true
+  tokenizer: ${TeacherConfig.dir}
+  tasks: ["arc_challenge", "arc_easy", "hellaswag", "piqa", "winogrande", "openbookqa", "lambada_openai", "mmlu"]
+  enable_tqdm: false
+  save_latest: true

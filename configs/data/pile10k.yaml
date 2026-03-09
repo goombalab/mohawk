@@ -1,0 +1,7 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: NeelNanda/pile-10k
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: text

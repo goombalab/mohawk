@@ -1,0 +1,8 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: tomg-group-umd/GenQA
+    split: math
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: conversation

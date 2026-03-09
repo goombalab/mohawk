@@ -1,0 +1,7 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: teknium/GPT4-LLM-Cleaned
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: instruction

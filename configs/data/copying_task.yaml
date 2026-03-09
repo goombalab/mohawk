@@ -1,0 +1,9 @@
+TrainDataConfig:
+  loaders: [NeedleInHaystackDataset]
+  NeedleInHaystackDataset:
+    max_seq_len: 2048
+    type_haystack: none
+    type_needle_k: words
+    type_needle_v: numbers
+    num_needle_k: 15
+    tokenizer_name: ${TeacherConfig.dir}

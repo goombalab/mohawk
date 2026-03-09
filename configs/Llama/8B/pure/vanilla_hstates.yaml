@@ -1,0 +1,6 @@
+LOAD:
+- ./configs/Llama/8B/bases/_hstates.yaml
+- ./configs/Llama/8B/bases/llama_mamba2.yaml
+
+DistillConfig:
+  name: pure_vanilla

@@ -1,0 +1,9 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: HuggingFaceFW/fineweb-edu
+    name: sample-100BT
+    streaming: false
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: text

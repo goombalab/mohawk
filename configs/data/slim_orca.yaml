@@ -1,0 +1,7 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: Open-Orca/SlimOrca
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: conversation

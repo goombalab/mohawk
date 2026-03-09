@@ -1,0 +1,18 @@
+ComponentsConfig:
+  LanguageModel: 
+    type: LayeredMambaLM
+    input: {vocab_size: 51200, tie_embeddings: false, pad_vocab_size_multiple: 8}
+    weights_init: {lm_head: teacher}
+  MixerModel:
+    type: MixerModel
+    input: {d_model: 2048, n_layer: 24, lm_head_prenorm: layer}
+    weights_init: {embedding: teacher, lm_head_prenorm: teacher}
+  Block1:
+    n_layers: 24
+    type: MambaPhi    
+    input: {resid_dropout: 0.0}
+    weights_init: {mlp: teacher, norm: teacher}
+    Layer:
+      type: PhiAttention
+      input: {flash_attention: true}
+      weights_init: {attention: default}

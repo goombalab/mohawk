@@ -1,0 +1,8 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: cognitivecomputations/dolphin
+    name: flan5m-alpaca-uncensored
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: instruction

@@ -1,0 +1,18 @@
+LOAD:
+  - ./configs/Phi/1.5B/base/optimizer.yaml
+  - ./configs/Phi/1.5B/base/train.yaml
+  - ./configs/management.yaml
+  - ./configs/Phi/1.5B/base/test15_phi_from_phi/components.yaml
+
+DistillConfig:
+  name: test15_phi_from_phi
+  teacher_model: microsoft/phi-1_5 # llama, phi
+  type: supervised # hstates vs supervised
+
+DataConfig:
+  train:
+    batch_size: 4 # DDP has bs per gpu
+    n_tokens: !!float 5e9 # 10B, 5B, 2.5B, 1B, 0.5B, 0.25B
+  val:
+    batch_size: 8
+    n_tokens: !!float 4e6 

@@ -1,0 +1,75 @@
+LOAD: 
+- ./configs/Llama/8B/bases/teacher.yaml
+- ./configs/Llama/8B/bases/optimizer.yaml
+- ./configs/Llama/8B/bases/train.yaml
+- ./configs/management.yaml
+
+DistillConfig:
+  type: supervised
+
+OptimizerConfig:
+  lr: 1.0e-06  # 6.0e-06
+
+TrainConfig:
+  n_tokens: !!float 1e10
+
+TrainDataConfig:
+  loaders: [SequentialLoader, PackingDataLoader, CycleDataLoader, TorchDataLoader]
+  SequentialLoader:
+    # max_samples: 1000000
+    train_data_configs:
+    # Mathematical Reasoning
+    # - !load_yaml ./configs/data/meta_math_qa.yaml
+    
+    # Instruction Following and Conversational Data
+    # - !load_yaml ./configs/data/lmsys_chat_1m.yaml
+    # - !load_yaml ./configs/data/WizardLM_evol_instruct_V2_196k.yaml
+    # - !load_yaml ./configs/data/slim_orca.yaml
+    # - !load_yaml ./configs/data/ultra_chat_200k.yaml
+    # - !load_yaml ./configs/data/oasst2.yaml
+    # - !load_yaml ./configs/data/GPTeacher_General_Instruct.yaml
+    - !load_yaml ./configs/data/open_hermes_2.5.yaml
+    # - !load_yaml ./configs/data/Open_Platypus.yaml
+    # - !load_yaml ./configs/data/capybara.yaml
+    
+    # Code Assistance
+    # - !load_yaml ./configs/data/glaive_code_assistant.yaml
+    # - !load_yaml ./configs/data/hermes_function_calling_v1.yaml
+    # - !load_yaml ./configs/data/dolphin.yaml
+    
+    # General Language Model Pretraining
+    # - !load_yaml ./configs/data/falcon_refinedweb.yaml
+    # - !load_yaml ./configs/data/fineweb_edu.yaml
+  PackingDataLoader:
+    max_seq_len: 2048
+  CycleDataLoader:
+    num_cycles: !!float inf
+  TorchDataLoader:
+    num_workers: 0
+    batch_size: 4
+
+
+EvalConfig:
+  
+- Evaluation: benchmark
+  frequency: 500
+  batch_size: 16
+  max_length: 4096
+  eval_at_start: true
+  eval_at_end: true
+  tokenizer: ${TeacherConfig.dir}
+  tasks: ["arc_challenge", "arc_easy", "hellaswag", "piqa", "winogrande", "openbookqa", "lambada_openai", "mmlu"]
+  enable_tqdm: false
+  save_latest: true
+  
+- Evaluation: benchmark
+  frequency: 1000
+  batch_size: 8
+  num_fewshot: 5
+  max_length: 4096
+  eval_at_start: true
+  eval_at_end: true
+  tokenizer: ${TeacherConfig.dir}
+  tasks: ["arc_challenge", "arc_easy", "hellaswag", "piqa", "winogrande", "openbookqa", "lambada_openai", "mmlu"] ##, "ifeval", "okapi"]
+  enable_tqdm: false
+  save_latest: false

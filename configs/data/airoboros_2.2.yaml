@@ -1,0 +1,8 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: jondurbin/airoboros-2.2
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: classic
+

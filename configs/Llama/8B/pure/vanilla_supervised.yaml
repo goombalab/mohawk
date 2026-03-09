@@ -1,0 +1,31 @@
+LOAD:
+- ./configs/Llama/8B/bases/_supervised.yaml
+- ./configs/Llama/8B/bases/llama_mamba2.yaml
+
+DistillConfig:
+  name: pure_8B
+
+TrainDataConfig:
+  TorchDataLoader:
+    batch_size: 8
+
+TrainConfig:
+  effective_batch_size: 64  # don't divide by n_gpus
+
+OptimizerConfig:
+  lr: 1.0e-07
+
+ComponentsConfig:
+  input: {vocab_size: 128256, tie_embeddings: false, pad_vocab_size_multiple: 8, lm_head_bias: false}
+
+LoadConfig:
+  model:
+    - path: <path-to-checkpoint>  # Replace with your checkpoint path
+
+
+OptimizerConfig:
+  optimize_weights:
+    white_list: [
+      '.16.mixer',
+      '.17.mixer',
+    ]

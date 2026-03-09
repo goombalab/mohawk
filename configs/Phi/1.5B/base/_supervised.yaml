@@ -1,0 +1,67 @@
+LOAD:
+  - ./configs/Phi/1.5B/base/optimizer.yaml
+  - ./configs/Phi/1.5B/base/train.yaml
+  - ./configs/management.yaml
+  - ./configs/Phi/1.5B/base/load.yaml
+
+DistillConfig:
+  teacher_model: microsoft/phi-1_5
+  type: supervised
+
+
+TrainConfig:
+  activation_checkpointing: true
+  DataConfig:
+    n_tokens: !!float 6e9
+    batch_size: 16
+
+EvalConfig:
+
+- Evaluation: eval_hstates
+  frequency: !!float inf
+  eval_at_start: true
+  eval_at_end: false
+  save_latest: false
+  mixed_precision: true
+  DataConfig:
+    data_dir: <path-to-c4-dataset>  # Replace with your C4 dataset path
+    loader: C4DataLoader
+    dataset_type: classic
+    tokenizer: ${DistillConfig.teacher_model}
+    cycle: false
+    cycle: false
+    num_workers: 4
+    max_seq_len: 2048
+    seed: 42
+    batch_size: 16
+    n_tokens: !!float 1e7
+
+- Evaluation: benchmark
+  frequency: 1000
+  batch_size: 32
+  mixed_precision: true
+  eval_at_start: true
+  eval_at_end: true
+  tasks: ["arc_challenge", "arc_easy", "hellaswag", "piqa", "winogrande", "lambada_openai", "mmlu"]
+  enable_tqdm: false
+  save_latest: true
+
+- Evaluation: eval_ppl
+  frequency: 1000
+  mixed_precision: true
+  eval_at_start: true
+  eval_at_end: true
+  save_latest: false
+  DataConfig:
+    loaders: [JSONIterableDataset, Tokenize, PaddingDataLoader, TorchDataLoader]
+    JSONIterableDataset:
+      data_dir: <path-to-fineweb-edu-dataset>  # Replace with your FineWeb-Edu dataset path
+    Tokenize:
+      tokenizer: ${DistillConfig.teacher_model}
+      collate_type: text
+    PaddingDataLoader:
+      n_tokens: !!float 1e7
+      max_seq_len: 2048
+    TorchDataLoader:
+      num_workers: 0
+      batch_size: 8

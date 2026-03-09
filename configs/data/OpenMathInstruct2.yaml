@@ -1,0 +1,8 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: nvidia/OpenMathInstruct-2
+    split: train_5M # there's train_1M \ train_2M \ train_5M \ train (14M)
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: instruction

@@ -1,0 +1,7 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: NousResearch/hermes-function-calling-v1
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: conversation

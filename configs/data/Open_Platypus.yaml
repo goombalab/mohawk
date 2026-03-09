@@ -1,0 +1,7 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: garage-bAInd/Open-Platypus
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: instruction

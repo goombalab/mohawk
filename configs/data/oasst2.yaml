@@ -1,0 +1,7 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: OpenAssistant/oasst2
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: instruction

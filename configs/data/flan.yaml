@@ -1,0 +1,7 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: Open-Orca/FLAN
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: instruction

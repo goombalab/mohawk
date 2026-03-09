@@ -1,0 +1,12 @@
+LOAD:
+  - ./configs/Phi/1.5B/base/optimizer.yaml
+  - ./configs/Phi/1.5B/base/train.yaml
+  - ./configs/management.yaml
+  - ./configs/Phi/1.5B/base/load.yaml
+
+DistillConfig:
+  teacher_model: microsoft/phi-1_5
+  type: matrices
+
+OptimizerConfig:
+  lr: 2.0e-04

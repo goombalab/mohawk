@@ -1,0 +1,155 @@
+# Pattern: Attn -> SSM x4 -> Attn -> SSM x4 -> Attn -> SSM x4 -> Attn
+# Total: 1 + 4 + 1 + 4 + 1 + 4 + 1 = 16 layers
+
+LOAD:
+# - ./configs/Llama/1B/bases/_hstates.yaml
+# - ./configs/Llama/1B/bases/_supervised.yaml
+- ./configs/Llama/1B/bases/_post_supervised.yaml
+
+DistillConfig:
+  name: ${ARCH_NAME}
+
+TeacherConfig:
+  dir: meta-llama/Llama-3.1-8B-Instruct
+  # dir: meta-llama/Llama-3.1-70B-Instruct
+  model_dtype: bfloat16
+  mixed_precision: false
+TrainDataConfig:
+  TorchDataLoader:
+    batch_size: 2
+
+BLOCK_INPUT: {resid_dropout: 0.0, mlp_intermediate_size: 8192, mlp_act_fn: 'silu', norm_epsilon: !!float 1e-5}
+
+SSM_INPUT: {
+  use_ref_impl: false,
+  d_state: 64, n_qk_heads: 32, n_v_heads: 32, expand: 1, chunk_size: 128, headdim: 64, 
+  activation: identity, bias: true, norm_cls: none,
+  initializer: {z: default, a_log: default, x: default, B: default, C: default, D: default, out: default, convolution: identity}
+  }
+
+ATTN_INPUT:
+  flash_attention: true
+  hidden_size: "${ComponentsConfig.MixerModel.input.d_model}"
+  rope_scaling: ${ROPE_SCALING}
+  rope_theta: 500000.0
+  max_position_embeddings: 131072
+  num_attention_heads: 32
+  num_key_value_heads: 8
+  attention_bias: false
+  attention_dropout: 0.0
+  head_dim: 64
+  hidden_act: "silu"
+  initializer_range: 0.02
+  intermediate_size: 8192
+
+
+LoadConfig:
+  model:
+    - null # ignore previous LoadConfig.model entries
+    - path: <path-to-checkpoint>  # Replace with your checkpoint path
+      allow_missing_keys: false
+      allow_unexpected_keys: false
+
+  
+
+
+
+
+########################################################
+################ MOHAWK-0 ARCHITECTURE #################
+########################################################
+
+ARCH_NAME: Hybrid-1B-MOHAWK-0
+ROPE_SCALING: {
+  factor: !!float 8,
+  low_freq_factor: !!float 1,
+  high_freq_factor: !!float 4,
+  original_max_position_embeddings: 8192,
+  rope_type: llama3,
+  }
+
+
+ComponentsConfig:
+  name: LayeredMambaLM
+  input: {vocab_size: 128256, tie_embeddings: true, pad_vocab_size_multiple: 8, lm_head_bias: false}
+  MixerModel:
+    name: LlamaModel
+    input:
+      d_model: 2048
+      n_layer: 16
+      lm_head_prenorm: rms
+      norm_epsilon: !!float 1e-5
+      rope_scaling: ${ROPE_SCALING}
+      rope_theta: 500000.0
+      max_position_embeddings: 131072
+    Blocks:
+    ###############################################################################
+    #  L0  – Full Attention (32 attention heads)
+    ###############################################################################
+    - name: LlamaBlock
+      n_layers: 1
+      input: ${BLOCK_INPUT}
+      Layer:
+        name: LlamaAttention
+        input: ${ATTN_INPUT}
+
+    ###############################################################################
+    #  L1-L4  – Pure SSM (0 attention heads)
+    ###############################################################################
+    - name: LlamaBlock
+      n_layers: 4
+      input: ${BLOCK_INPUT}
+      Layer:
+        name: DiscreteMamba2
+        input: ${SSM_INPUT}
+
+    ###############################################################################
+    #  L5  – Full Attention (32 attention heads)
+    ###############################################################################
+    - name: LlamaBlock
+      n_layers: 1
+      input: ${BLOCK_INPUT}
+      Layer:
+        name: LlamaAttention
+        input: ${ATTN_INPUT}
+
+    ###############################################################################
+    #  L6-L9  – Pure SSM (0 attention heads)
+    ###############################################################################
+    - name: LlamaBlock
+      n_layers: 4
+      input: ${BLOCK_INPUT}
+      Layer:
+        name: DiscreteMamba2
+        input: ${SSM_INPUT}
+
+    ###############################################################################
+    #  L10  – Full Attention (32 attention heads)
+    ###############################################################################
+    - name: LlamaBlock
+      n_layers: 1
+      input: ${BLOCK_INPUT}
+      Layer:
+        name: LlamaAttention
+        input: ${ATTN_INPUT}
+
+    ###############################################################################
+    #  L11-L14  – Pure SSM (0 attention heads)
+    ###############################################################################
+    - name: LlamaBlock
+      n_layers: 4
+      input: ${BLOCK_INPUT}
+      Layer:
+        name: DiscreteMamba2
+        input: ${SSM_INPUT}
+
+    ###############################################################################
+    #  L15  – Full Attention (32 attention heads)
+    ###############################################################################
+    - name: LlamaBlock
+      n_layers: 1
+      input: ${BLOCK_INPUT}
+      Layer:
+        name: LlamaAttention
+        input: ${ATTN_INPUT}
+

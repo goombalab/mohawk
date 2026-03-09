@@ -1,0 +1,30 @@
+ComponentsConfig:
+  name: LayersMixerModel
+  input: {d_model: 2048, n_layer: 24}
+  Blocks:
+  - Block:
+    n_layers: 24
+    name: MambaPhi    
+    input: {resid_dropout: 0.0}
+    Layer:
+      name: PhiAttention
+      input: {flash_attention: true}
+
+
+LoadConfig:
+  model:
+      # Load the teacher model into pure mamba
+    - path: ${DistillConfig.teacher_model}
+      strict: false
+      allow_missing_keys: true # mixer keys are missing
+      allow_unexpected_keys: false # all keys from the teacher model are expected
+      rename: {
+        'model.': '',
+        'module.': '',
+        'self_attn.': 'mixer.self_attn.',
+        }
+      black_list: []
+      white_list: [
+        mlp,
+        input_layernorm,
+      ]

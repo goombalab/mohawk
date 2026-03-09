@@ -1,0 +1,7 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: stingning/ultrachat
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: conversation

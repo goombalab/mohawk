@@ -1,0 +1,6 @@
+LOAD:
+- ./configs/Qwen2/1.5B/bases/_matrices.yaml
+- ./configs/Qwen2/1.5B/pure/components.yaml
+
+DistillConfig:
+  name: pure_1B

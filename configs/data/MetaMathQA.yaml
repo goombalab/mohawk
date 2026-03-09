@@ -1,0 +1,7 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: meta-math/MetaMathQA
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: instruction

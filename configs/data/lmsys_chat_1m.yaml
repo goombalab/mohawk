@@ -1,0 +1,7 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: lmsys/lmsys-chat-1m
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: instruction

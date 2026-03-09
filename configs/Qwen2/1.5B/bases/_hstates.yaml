@@ -1,0 +1,45 @@
+LOAD: 
+- ./configs/Qwen2/1.5B/bases/load.yaml
+- ./configs/Qwen2/1.5B/bases/teacher.yaml
+- ./configs/Qwen2/1.5B/bases/optimizer.yaml
+- ./configs/Qwen2/1.5B/bases/train.yaml
+- ./configs/management.yaml
+
+DistillConfig:
+  type: hstates
+
+OptimizerConfig:
+  lr: 1.0e-04
+
+TrainConfig:
+  n_tokens: !!float 5e9
+  init_fn: eager # lazy, eager
+  
+TrainDataConfig:
+  loaders: [RoundRobinLoader, PackingDataLoader, CycleDataLoader, TorchDataLoader]
+  RoundRobinLoader:
+    train_data_configs:
+    - !load_yaml ./configs/data/fineweb_edu.yaml
+    - !load_yaml ./configs/data/finemath.yaml
+  PackingDataLoader:
+    max_seq_len: 2048
+  CycleDataLoader:
+    num_cycles: !!float inf
+  TorchDataLoader:
+    num_workers: 0
+    batch_size: 32
+
+EvalConfig:
+
+- Evaluation: benchmark
+  frequency: 1000
+  batch_size: 16
+  max_length: 4096
+  eval_at_start: true
+  eval_at_end: true
+  tokenizer: ${TrainConfig.tokenizer}
+  # tasks: ["arc_easy", "arc_challenge", "hellaswag", "piqa", "winogrande", "openbookqa", "mmlu", "lambada_openai", "gsm8k", "ifeval", "swde"] #, "wikitext"]
+  tasks: ["arc_challenge", "arc_easy", "hellaswag", "piqa", "winogrande", "openbookqa", "mmlu"]
+  enable_tqdm: false
+  save_latest: true # false
+

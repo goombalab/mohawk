@@ -1,0 +1,15 @@
+LOAD:
+  - ./configs/Phi/1.5B/base/_supervised.yaml
+  - ./configs/Phi/1.5B/base/optimizer.yaml
+  - ./configs/Phi/1.5B/base/train.yaml
+  - ./configs/management.yaml
+  - ./configs/Phi/1.5B/hybrid/components.yaml
+
+DistillConfig:
+  name: test5
+  teacher_model: microsoft/phi-1_5 # llama, phi
+  type: supervised # hstates vs supervised
+  
+LoadConfig:
+  model_path: <path-to-checkpoint>  # Replace with your checkpoint path
+  optimizer_path: null

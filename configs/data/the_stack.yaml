@@ -1,0 +1,8 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: bigcode/the-stack-dedup
+    streaming: true
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: text

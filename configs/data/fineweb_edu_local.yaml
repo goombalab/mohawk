@@ -1,0 +1,7 @@
+TrainDataConfig:
+  loaders: [JSONIterableDataset, Tokenize]
+  JSONIterableDataset:
+    path: <path-to-fineweb-edu-dataset>  # Replace with your FineWeb-Edu dataset path
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: text

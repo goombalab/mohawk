@@ -1,0 +1,30 @@
+ManagementConfig:
+  wandb:
+    # W&B API key should be set via WANDB_API_KEY environment variable
+    # The code will check for WANDB_API_KEY env var if key is not set here
+    # key: "your-wandb-api-key-here"
+    project: "mohawk" # wandb project name
+    entity: "your-wandb-entity"  # Change to your W&B entity/username
+    save_code: true
+
+  paths:
+    # Base directory for cache and temporary files
+    # Change this to your preferred location (e.g., /data/cache, ~/mohawk_cache)
+    base_dir: /tmp/mohawk_cache
+    save_dir: ${ManagementConfig.paths.base_dir}/distillation/${DistillConfig.name}/${DistillConfig.type}/${slurm_job_id}
+    tmp_dir: ${ManagementConfig.paths.base_dir}/tmp/${DistillConfig.name}/${DistillConfig.type}/${slurm_job_id}
+  
+  env_vars:
+    # WANDB
+    WANDB_MODE: "online" # online/offline/disabled
+    WANDB_DIR: /tmp/wandb  # Change to your preferred W&B directory
+    # TORCH
+    TORCH_HOME: ${ManagementConfig.paths.base_dir}/torch_home
+    # HF
+    # HuggingFace token should be set via HF_TOKEN environment variable
+    # The code will check for HF_TOKEN env var if this is empty
+    HF_TOKEN: ""  # Leave empty to use HF_TOKEN environment variable
+    HF_DATASETS_CACHE: ${ManagementConfig.paths.base_dir}/huggingface/datasets
+    HF_HUB_CACHE: ${ManagementConfig.paths.base_dir}/huggingface/hub
+    LOGURU_LEVEL: "DEBUG"
+    NCCL_DEBUG: "INFO"

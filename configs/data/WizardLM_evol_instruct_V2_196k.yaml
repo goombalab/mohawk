@@ -1,0 +1,7 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: WizardLM/WizardLM_evol_instruct_V2_196k
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: conversation

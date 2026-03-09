@@ -1,0 +1,6 @@
+LOAD:
+- ./configs/Llama/3B/bases/_matrices.yaml
+- ./configs/Llama/3B/bases/llama_mamba22.yaml
+
+DistillConfig:
+  name: pure_vanilla_3B

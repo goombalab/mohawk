@@ -1,0 +1,9 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: tiiuae/falcon-refinedweb
+    
+    streaming: true
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: text

@@ -1,0 +1,19 @@
+LOAD:
+  - ./configs/Phi/1.5B/base/_supervised.yaml
+  - ./configs/Phi/1.5B/base/h_phi_mamba2.yaml
+
+DistillConfig:
+  name: hybrid_phi_mamba
+
+LoadConfig:
+  model:
+    - path: <path-to-checkpoint>  # Replace with your checkpoint path
+      strict: false
+    - path: microsoft/phi-1_5
+      strict: false
+      black_list: []
+      white_list: ['.4.', '.10.', '.16.', '.22.'] # Blocks 4, 10, 16, 22
+      rename: {'model.': 'backbone.', 'self_attn.': 'mixer.self_attn.', 'module.': ''}
+  optimizer:
+    - path: null
+      strict: false

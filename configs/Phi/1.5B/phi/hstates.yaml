@@ -1,0 +1,49 @@
+LOAD:
+  - ./configs/Phi/1.5B/base/_hstates.yaml
+  - ./configs/Phi/1.5B/base/phi.yaml
+  # - ./configs/Phi/1.5B/base/phi_layers.yaml
+
+DistillConfig:
+  name: test15_phi_from_phi
+  teacher_model: microsoft/phi-1_5 # llama, phi
+  type: hstates # hstates vs supervised
+
+OptimizerConfig:
+  optimizer: AdamW
+  lr: 1.0
+  weight_decay: 0.0
+
+
+TrainConfig:
+  seed: 42
+  mixed_precision: true
+  activation_checkpointing: false
+  # sharding_strategy: HYBRID_SHARD
+  sharding_strategy: NO_SHARD
+  DataConfig:
+    data_dir: HuggingFaceFW/fineweb-edu
+    loader: HFDataset
+    tokenizer: ${DistillConfig.teacher_model}
+    streaming: true
+    batch_size: 1
+
+
+LoadConfig:
+  model:
+      # Load the teacher model into pure mamba
+    - path: ${DistillConfig.teacher_model}
+      strict: false
+      allow_missing_keys: true # mixer keys are missing
+      allow_unexpected_keys: false # seclected keys from teacher must move to student
+      rename: {
+        # order matters
+        'model.': 'backbone.', 
+        'self_attn.': 'mixer.self_attn.', 
+        'module.': '',
+        'embed_tokens.': 'embedding.',
+        '.norm.': '.final_layernorm.',
+        }
+      black_list: []
+      white_list: [
+        self_attn
+      ]

@@ -1,0 +1,14 @@
+ComponentsConfig:
+  name: LayeredMambaLM
+  input: {vocab_size: 51200, tie_embeddings: false, pad_vocab_size_multiple: 8, lm_head_bias: true}
+  MixerModel:
+    name: LlamaModel
+    input: {d_model: 2048, n_layer: 24, lm_head_prenorm: layer}
+    Blocks:
+    - Block:
+      name: MambaPhi
+      n_layers: 24
+      input: {resid_dropout: 0.0}
+      Layer:
+        name: PhiAttention
+        input: {flash_attention: true}

@@ -1,0 +1,17 @@
+ComponentsConfig:
+  name: LayeredMambaLM
+  input: {vocab_size: 151936, tie_embeddings: true, pad_vocab_size_multiple: 8, lm_head_bias: false}
+  MixerModel:
+    name: Qwen2Model
+    input: {d_model: 1536, n_layer: 28, lm_head_prenorm: rms}
+    Blocks:
+    - name: Qwen2Block
+      n_layers: 28
+      input: {resid_dropout: 0.0, mlp_intermediate_size: 8960, mlp_act_fn: 'silu'}
+      Layer:
+        name: DiscreteMamba2
+        input: {
+          d_state: 128, n_qk_heads: 12, n_v_heads: 12, expand: 1, chunk_size: 128, 
+          activation: identity, use_ref_impl: false, bias: false, norm_cls: none,
+          initializer: {a_log: default, x: default, B: default, C: default, D: default, z: default, out: default, convolution: identity}
+          }

@@ -1,0 +1,12 @@
+LOAD:
+- ./configs/Qwen2/1.5B/bases/_matrices.yaml
+- ./configs/Qwen2/1.5B/qwen/components.yaml
+
+DistillConfig:
+  name: Qwen2
+
+TrainConfig:
+  activation_checkpointing: true
+  DataConfig:
+    batch_size: 1
+    effective_batch_size: 64

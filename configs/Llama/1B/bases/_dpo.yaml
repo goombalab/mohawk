@@ -1,0 +1,45 @@
+LOAD: 
+- ./configs/Llama/1B/bases/load.yaml
+- ./configs/Llama/1B/bases/teacher.yaml
+- ./configs/Llama/1B/bases/optimizer.yaml
+- ./configs/Llama/1B/bases/train.yaml
+- ./configs/management.yaml
+
+DistillConfig:
+  type: dpo
+  beta: 0.1  # DPO temperature parameter (typical range: 0.1-0.5)
+
+OptimizerConfig:
+  lr: 1.0e-05  # Usually lower LR for DPO compared to supervised training
+
+TrainConfig:
+  n_tokens: !!float 1e9
+  init_fn: eager # lazy, eager
+  
+TrainDataConfig:
+  loaders: [RoundRobinLoader, PackingDataLoader, TorchDataLoader]
+  RoundRobinLoader:
+    train_data_configs:
+    # Example: Use a preference dataset
+    # - !load_yaml ./configs/data/preference_dataset.yaml
+    # For now, you'll need to create a preference dataset config
+    - !load_yaml ./configs/data/fineweb_edu.yaml
+  PackingDataLoader:
+    max_seq_len: 2048
+  TorchDataLoader:
+    num_workers: 0
+    batch_size: 16
+
+EvalConfig:
+- Evaluation: benchmark
+  frequency: 1000
+  batch_size: 16
+  max_length: 4096
+  eval_at_start: true
+  eval_at_end: true
+  tokenizer: ${TrainConfig.tokenizer}
+  tasks: ["arc_challenge", "arc_easy", "hellaswag", "piqa", "winogrande", "openbookqa", "mmlu"]
+  enable_tqdm: false
+  save_latest: true
+
+

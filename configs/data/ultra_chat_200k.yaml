@@ -1,0 +1,8 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: HuggingFaceH4/ultrachat_200k
+    split: train_sft
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: conversation

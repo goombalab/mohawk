@@ -1,0 +1,7 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: LDJnr/Capybara
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: instruction

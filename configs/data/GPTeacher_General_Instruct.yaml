@@ -1,0 +1,7 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: teknium/GPTeacher-General-Instruct
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: instruction

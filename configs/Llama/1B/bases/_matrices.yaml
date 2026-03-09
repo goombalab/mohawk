@@ -1,0 +1,55 @@
+LOAD: 
+- ./configs/Llama/1B/bases/load.yaml
+- ./configs/Llama/1B/bases/teacher.yaml
+- ./configs/Llama/1B/bases/optimizer.yaml
+- ./configs/Llama/1B/bases/train.yaml
+- ./configs/management.yaml
+
+DistillConfig:
+  type: matrices
+
+OptimizerConfig:
+  lr: 1.0e-04
+
+TeacherConfig:
+  attn_implementation: eager
+
+TrainDataConfig:
+  loaders: [RoundRobinLoader, PackingDataLoader, TorchDataLoader]
+  RoundRobinLoader:
+    train_data_configs:
+    - !load_yaml ./configs/data/fineweb_edu.yaml
+  PackingDataLoader:
+    max_seq_len: 2048
+  TorchDataLoader:
+    num_workers: 0
+    batch_size: 8
+
+TrainConfig:
+  n_tokens: !!float 3e8
+  effective_batch_size: 64  # don't divide by n_gpus
+  mixed_precision: true  
+  model_dtype: float32
+  init_fn: eager # lazy, eager
+  attn_implementation: eager
+
+EvalConfig:
+
+- Evaluation: eval_hstates
+  frequency: 1000
+  mixed_precision: true
+  eval_at_start: false
+  eval_at_end: true
+  save_latest: true
+  n_batches: 100
+  DataConfig:
+    loaders: [RoundRobinLoader, PackingDataLoader, TorchDataLoader]
+    RoundRobinLoader:
+      train_data_configs:
+      - !load_yaml ./configs/data/c4.yaml
+    PackingDataLoader:
+      max_seq_len: 2048
+    TorchDataLoader:
+      num_workers: 0
+      batch_size: 8
+

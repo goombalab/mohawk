@@ -1,0 +1,23 @@
+
+
+LoadConfig:
+  model:
+    # Load standard components
+    - type: weights_loader
+      path: ${TeacherConfig.dir}
+      strict: false
+      allow_missing_keys: true
+      allow_unexpected_keys: false
+      rename: {
+        # order matters
+        'model.': 'backbone.', 
+        'self_attn.': 'mixer.self_attn.', 
+        'module.': '',
+        'embed_tokens.': 'embedding.',
+        '.norm.': '.final_layernorm.',
+      }
+      black_list: [self_attn, lm_head] # <- lm_head is tied to the embedding layer, no need to load it
+      
+    # Initialize SSM from attention
+    - type: init_ssm_from_attention
+      path: ${TeacherConfig.dir}

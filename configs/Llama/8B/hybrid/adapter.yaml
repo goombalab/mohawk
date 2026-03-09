@@ -1,0 +1,52 @@
+LOAD:
+- ./configs/Llama/8B/bases/_hstates.yaml
+# ARCHITECTURES:
+# - ./configs/Llama/8B/bases/_supervised.yaml
+# - ./configs/Llama/8B/bases/_post_supervised.yaml
+# - ./configs/Llama/8B/hybrid/architecture_0.yaml
+# - ./configs/Llama/8B/hybrid/architecture_1.yaml
+- ./configs/Llama/8B/hybrid/architecture_20.yaml
+
+DistillConfig:
+  name: ${ARCH_NAME}-${SSM_MIXER}-Adapter
+BLOCK_NAME: DoubleBlockAdapter
+BLOCK_INPUT: {resid_dropout: 0.0, mlp_intermediate_size: 14336, mlp_act_fn: 'silu'}
+ATTN_BIAS: false
+SSM_MIXER: DiscreteMamba2
+SSM_INPUT: {
+          d_state: 64, n_qk_heads: 32, n_v_heads: 32, expand: 1, chunk_size: 128, headdim: 128,
+          activation: identity, use_ref_impl: false, bias: false, norm_cls: none,
+          initializer: {a_log: default, x: default, B: default, C: default, D: default, z: default, out: default, convolution: identity}
+          }
+          
+TrainConfig:
+  init_fn: eager # lazy, eager
+  
+LoadConfig:
+  model:
+    - null # ignore previous LoadConfig.model entries
+    - path: <path-to-checkpoint>  # Replace with your checkpoint path
+      allow_missing_keys: true # mixer keys are missing
+      allow_unexpected_keys: true # all keys from the teacher model are expected
+      black_list: null
+      white_list: [self_attn]
+      rename: null
+    - path: ${TeacherConfig.dir}
+      allow_missing_keys: true # mixer keys are missing
+      allow_unexpected_keys: false # all keys from the teacher model are expected
+      rename: {
+        # order matters
+        'model.': 'backbone.', 
+        'module.': '',
+        'embed_tokens.': 'embedding.',
+        '.norm.': '.final_layernorm.',
+        }
+      black_list: []
+      white_list: [
+        lm_head, # Unlike 1B and 3B, 8B is not tied.
+        embedding,
+        mlp,
+        input_layernorm,
+        post_attention_layernorm,
+        final_layernorm,
+      ]

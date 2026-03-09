@@ -1,0 +1,17 @@
+LOAD:
+# - ./configs/Qwen2/1.5B/bases/_supervised.yaml
+- ./configs/Qwen2/1.5B/bases/_post_supervised.yaml
+- ./configs/Qwen2/1.5B/qwen/components.yaml
+
+DistillConfig:
+  name: Qwen2
+
+TrainConfig:
+  init_fn: eager # lazy, eager
+
+
+LoadConfig:
+  model:
+    - path: <path-to-checkpoint>  # Replace with your checkpoint path
+      allow_missing_keys: false # mixer keys are missing
+      allow_unexpected_keys: false # all keys from the teacher model are expected

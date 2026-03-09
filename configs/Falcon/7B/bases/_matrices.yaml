@@ -1,0 +1,51 @@
+LOAD: 
+- ./configs/Falcon/7B/bases/load.yaml
+- ./configs/Falcon/7B/bases/teacher.yaml
+- ./configs/Falcon/7B/bases/optimizer.yaml
+- ./configs/Falcon/7B/bases/train.yaml
+- ./configs/management.yaml
+
+DistillConfig:
+  type: matrices
+
+OptimizerConfig:
+  lr: 1.0e-04
+
+TrainDataConfig:
+  loaders: [RoundRobinLoader, PackingDataLoader, TorchDataLoader]
+  RoundRobinLoader:
+    train_data_configs:
+    - !load_yaml ./configs/data/fineweb_edu.yaml
+  PackingDataLoader:
+    max_seq_len: 2048
+  TorchDataLoader:
+    num_workers: 0
+    batch_size: 1
+
+TrainConfig:
+  n_tokens: !!float 1e9
+  effective_batch_size: 64  # don't divide by n_gpus
+  mixed_precision: true  
+  model_dtype: float32
+
+EvalConfig:
+
+- Evaluation: eval_hstates
+  frequency: 10
+  mixed_precision: true
+  eval_at_start: false
+  eval_at_end: true
+  save_latest: true
+  n_tokens: !!float 1e7
+  DataConfig:
+    loaders: [JSONIterableDataset, Tokenize, PaddingDataLoader, TorchDataLoader]
+    JSONIterableDataset:
+      data_dir: <path-to-fineweb-edu-dataset>  # Replace with your FineWeb-Edu dataset path
+    Tokenize:
+      tokenizer: ${TrainConfig.tokenizer}
+      collate_type: text
+    PaddingDataLoader:
+      max_seq_len: 2048
+    TorchDataLoader:
+      num_workers: 0
+      batch_size: 8

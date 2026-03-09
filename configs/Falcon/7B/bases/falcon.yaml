@@ -1,0 +1,21 @@
+DistillConfig:
+  name: Falcon-7B
+
+
+SSM_MIXER: FalconMambaMixer
+SSM_INPUT: {d_state: 16, expand: 1, chunk_size: 128, headdim: 128, n_v_heads: 32}
+
+        
+ComponentsConfig:
+  name: LayeredMambaLM
+  input: {vocab_size: 65024, tie_embeddings: false, pad_vocab_size_multiple: 8, lm_head_bias: false}
+  MixerModel:
+    name: LlamaModel
+    input: {d_model: 4096, n_layer: 64, lm_head_prenorm: rms}
+    Blocks:
+    - name: FalconBlock
+      n_layers: 64
+      input: {resid_dropout: 0.0}
+      Layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}

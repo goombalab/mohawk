@@ -1,0 +1,8 @@
+TrainDataConfig:
+  loaders: [KVRetrieval, Tokenize]
+  KVRetrieval:
+    num_pairs: 50
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: raw
+

@@ -1,0 +1,8 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: BAAI/Infinity-Instruct
+    name: 3M
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: conversation

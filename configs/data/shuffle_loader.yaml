@@ -1,0 +1,6 @@
+TrainDataConfig:
+  - name: ShuffleDataLoader
+    train_data_configs:
+    - !load_yaml ./configs/data/fineweb_edu.yaml
+    - !load_yaml ./configs/data/open_hermes_2.5.yaml
+    - !load_yaml ./configs/data/ultra_chat_200k.yaml

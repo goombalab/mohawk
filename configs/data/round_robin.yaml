@@ -1,0 +1,14 @@
+TrainDataConfig:
+  loaders: [RoundRobinLoader, PackingDataLoader, AggregationDataLoader, TorchDataLoader]
+  RoundRobinLoader:
+    train_data_configs:
+    - !load_yaml ./configs/data/fineweb_edu.yaml
+    - !load_yaml ./configs/data/open_hermes_2.5.yaml
+    - !load_yaml ./configs/data/ultra_chat_200k.yaml
+  PackingDataLoader:
+    max_pack_seq_len: 2048
+  AggregationDataLoader:
+    aggregation_size: 2_000
+  TorchDataLoader:
+    num_workers: 0
+    batch_size: 8

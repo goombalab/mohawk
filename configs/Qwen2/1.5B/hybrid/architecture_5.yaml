@@ -1,0 +1,207 @@
+
+
+LOAD:
+# Base configs
+# - ./configs/Qwen2/1.5B/bases/_hstates.yaml
+- ./configs/Qwen2/1.5B/bases/_supervised.yaml
+# - ./configs/Qwen2/1.5B/bases/_post_supervised.yaml
+
+DistillConfig:
+  name: ${ARCH_NAME}-DiscreteMamba2-Adapter
+
+
+LoadConfig:
+  model:
+    - null # ignore previous LoadConfig.model entries
+    - path: <path-to-checkpoint>  # Replace with your checkpoint path
+      allow_missing_keys: false # mixer keys are missing
+      allow_unexpected_keys: false # all keys from the teacher model are expected
+
+
+
+
+
+########################################################
+################### ARCHITECTURE 5 #####################
+########################################################
+# 13	4
+# 18	0
+# 16	3
+# 16	6
+# 22	7
+
+ARCH_NAME: Hybrid-Qwen2-1.5B-ARCH5
+BLOCK_INPUT: {resid_dropout: 0.0, mlp_intermediate_size: 8960, mlp_act_fn: 'silu', norm_epsilon: !!float 1e-6}
+
+SSM_INPUT: {
+  use_ref_impl: false,
+  d_state: 128,  headdim: 128,
+  n_qk_heads: 12, n_v_heads: 12, 
+  expand: 1, chunk_size: 128, activation: identity, use_ref_impl: false, bias: false, norm_cls: none,
+  initializer: {a_log: default, x: default, B: default, C: default, D: default, z: default, out: default, convolution: identity}
+  }
+
+ComponentsConfig:
+  name: LayeredMambaLM
+  input: {vocab_size: 151936, tie_embeddings: true, pad_vocab_size_multiple: 8, lm_head_bias: false}
+  MixerModel:
+    name: Qwen2Model
+    input: {d_model: 1536, n_layer: 28, lm_head_prenorm: rms, norm_epsilon: !!float 1e-6, max_position_embeddings: 32768, rope_theta: 1000000, head_dim: 128}
+    Blocks:
+
+    - name: DoubleBlockAdapter
+      n_layers: 13
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: DiscreteMamba2
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 0 # L0-L12
+          attention_bias: true
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+
+
+    - name: DoubleBlockAdapter
+      n_layers: 1
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: DiscreteMamba2
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 1 # L13
+          num_key_value_heads: 1
+          attention_bias: true
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+
+
+    - name: DoubleBlockAdapter
+      n_layers: 2
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: DiscreteMamba2
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 0 # L14-15
+          attention_bias: true
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+
+
+    - name: DoubleBlockAdapter
+      n_layers: 1
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: DiscreteMamba2
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 2 # L16
+          num_key_value_heads: 2
+          attention_bias: true
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+
+
+    - name: DoubleBlockAdapter
+      n_layers: 1
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: DiscreteMamba2
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 0 # L17
+          attention_bias: true
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+
+
+    - name: DoubleBlockAdapter
+      n_layers: 1
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: DiscreteMamba2
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 1 # L18
+          num_key_value_heads: 1
+          attention_bias: true
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+
+
+    - name: DoubleBlockAdapter
+      n_layers: 3
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: DiscreteMamba2
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 0 # L19-L21
+          attention_bias: true
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+
+
+    - name: DoubleBlockAdapter
+      n_layers: 1
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: DiscreteMamba2
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 1 # L22
+          num_key_value_heads: 1
+          attention_bias: true
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+
+
+    - name: DoubleBlockAdapter
+      n_layers: 5
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: DiscreteMamba2
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 0 # L23-L27
+          attention_bias: true
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+

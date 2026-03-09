@@ -1,0 +1,46 @@
+LOAD:
+- ./configs/Llama/1B/bases/_hstates.yaml
+- ./configs/Llama/1B/llama/llama_architecture.yaml
+
+DistillConfig:
+  name: llama
+  hstates_gap: 1
+
+OptimizerConfig:
+  lr: 1.0e-04
+
+TrainDataConfig:
+  TorchDataLoader:
+    batch_size: 16
+
+
+# ATTN_BIAS: true
+ARCH_NAME: Hybrid-1B-ARCH10
+ROPE_INPUT: {
+  factor: !!float 8,
+  low_freq_factor: !!float 1,
+  high_freq_factor: !!float 4,
+  original_max_position_embeddings: 8192,
+  rope_type: llama3,
+  }
+
+
+LoadConfig:
+  model:
+    - null # ignore previous LoadConfig.model entries
+      # Load the teacher model into pure mamba
+    - path: ${TeacherConfig.dir}
+      strict: false
+      allow_missing_keys: true # mixer keys are missing
+      allow_unexpected_keys: false # all keys from the teacher model are expected
+      rename: {
+        # order matters
+        'model.': 'backbone.', 
+        'self_attn.': 'mixer.self_attn.', 
+        'module.': '',
+        'embed_tokens.': 'embedding.',
+        '.norm.': '.final_layernorm.',
+        }
+      black_list: [
+        lm_head, # <- lm_head is tied to the embedding layer, no need to load it
+      ]

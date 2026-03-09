@@ -1,0 +1,232 @@
+ARCH_NAME: Hybrid-Qwen2-1.5B-ARCH10
+
+# (layer_idx, head_idx) for first 10 heads:
+# 13 4
+# 18 0
+# 16 3
+# 16 6
+# 22 7
+# 18 1
+# 16 1
+# 17 2
+# 21 11
+# 15 10
+
+ComponentsConfig:
+  name: LayeredMambaLM
+  input: {vocab_size: 151936, tie_embeddings: true, pad_vocab_size_multiple: 8, lm_head_bias: false}
+  MixerModel:
+    name: Qwen2Model
+    input: {d_model: 1536, n_layer: 28, lm_head_prenorm: rms}
+    Blocks:
+
+    # L0–L12: 0 heads
+    - name: ${BLOCK_NAME}
+      n_layers: 13
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 0   # L0-L12
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+
+    # L13: 1 head (head 4)
+    - name: ${BLOCK_NAME}
+      n_layers: 1
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 1   # L13
+          num_key_value_heads: 1
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+
+    # L14: 0 heads
+    - name: ${BLOCK_NAME}
+      n_layers: 1
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 0   # L14
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+
+    # L15: 1 head (head 10)
+    - name: ${BLOCK_NAME}
+      n_layers: 1
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 1   # L15
+          num_key_value_heads: 1
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+
+    # L16: 3 heads (heads 1,3,6)
+    - name: ${BLOCK_NAME}
+      n_layers: 1
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 3   # L16
+          num_key_value_heads: 3
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+
+    # L17: 1 head (head 2)
+    - name: ${BLOCK_NAME}
+      n_layers: 1
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 1   # L17
+          num_key_value_heads: 1
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+
+    # L18: 2 heads (heads 0,1)
+    - name: ${BLOCK_NAME}
+      n_layers: 1
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 2   # L18
+          num_key_value_heads: 2
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+
+    # L19: 0 heads
+    - name: ${BLOCK_NAME}
+      n_layers: 1
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 0   # L19
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+
+    # L20: 0 heads
+    - name: ${BLOCK_NAME}
+      n_layers: 1
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 0   # L20
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+
+    # L21: 1 head (head 11)
+    - name: ${BLOCK_NAME}
+      n_layers: 1
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 1   # L21
+          num_key_value_heads: 1
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+
+    # L22: 1 head (head 7)
+    - name: ${BLOCK_NAME}
+      n_layers: 1
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 1   # L22
+          num_key_value_heads: 1
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768
+
+    # L23–L27: 0 heads
+    - name: ${BLOCK_NAME}
+      n_layers: 5
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: Qwen2Attention
+        input:
+          num_attention_heads: 0   # L23-L27
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 1000000
+          max_position_embeddings: 32768

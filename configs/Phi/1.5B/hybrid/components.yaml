@@ -1,0 +1,96 @@
+ComponentsConfig:
+  LanguageModel: 
+    type: LayeredMambaLM
+    input: {vocab_size: 51200, tie_embeddings: false, pad_vocab_size_multiple: 8, lm_head_bias: false}
+    weights_init: {lm_head: teacher}
+    
+  MixerModel:
+    type: MixerModel
+    input: {d_model: 2048, n_layer: 24, lm_head_prenorm: layer}
+    weights_init: {embedding: teacher, lm_head_prenorm: teacher}
+
+  Block1:
+    n_layers: 4
+    type: MambaPhi    
+    input: {resid_dropout: 0.0}
+    weights_init: {mlp: teacher, norm: teacher}
+    Layer:
+      type: DiscreteMamba2
+      input: {d_state: 64, n_qk_heads: 32, n_v_heads: 32, expand: 1, activation: identity, use_ref_impl: false, bias: false, norm_cls: none}
+      weights_init: {a_log: default, x: default, B: default, C: default, D: default, z: identity, out: default, convolution: identity}
+  Block2:
+    n_layers: 1
+    type: MambaPhi
+    input: {resid_dropout: 0.0}
+    weights_init: {mlp: teacher, norm: teacher}
+    Layer:
+      type: PhiAttention
+      input: {flash_attention: true}
+      weights_init: {attention: teacher}
+
+  Block3:
+    n_layers: 5
+    type: MambaPhi    
+    input: {resid_dropout: 0.0}
+    weights_init: {mlp: teacher, norm: teacher}
+    Layer:
+      type: DiscreteMamba2
+      input: {d_state: 64, n_qk_heads: 32, n_v_heads: 32, expand: 1, activation: identity, use_ref_impl: false, bias: false, norm_cls: none}
+      weights_init: {a_log: default, x: default, B: default, C: default, D: default, z: identity, out: default, convolution: identity}
+  Block4:
+    n_layers: 1
+    type: MambaPhi
+    input: {resid_dropout: 0.0}
+    weights_init: {mlp: teacher, norm: teacher}
+    Layer:
+      type: PhiAttention
+      input: {flash_attention: true}
+      weights_init: {attention: teacher}
+
+  Block5:
+    n_layers: 5
+    type: MambaPhi    
+    input: {resid_dropout: 0.0}
+    weights_init: {mlp: teacher, norm: teacher}
+    Layer:
+      type: DiscreteMamba2
+      input: {d_state: 64, n_qk_heads: 32, n_v_heads: 32, expand: 1, activation: identity, use_ref_impl: false, bias: false, norm_cls: none}
+      weights_init: {a_log: default, x: default, B: default, C: default, D: default, z: identity, out: default, convolution: identity}
+  Block6:
+    n_layers: 1
+    type: MambaPhi
+    input: {resid_dropout: 0.0}
+    weights_init: {mlp: teacher, norm: teacher}
+    Layer:
+      type: PhiAttention
+      input: {flash_attention: true}
+      weights_init: {attention: teacher}
+
+  Block7:
+    n_layers: 5
+    type: MambaPhi    
+    input: {resid_dropout: 0.0}
+    weights_init: {mlp: teacher, norm: teacher}
+    Layer:
+      type: DiscreteMamba2
+      input: {d_state: 64, n_qk_heads: 32, n_v_heads: 32, expand: 1, activation: identity, use_ref_impl: false, bias: false, norm_cls: none}
+      weights_init: {a_log: default, x: default, B: default, C: default, D: default, z: identity, out: default, convolution: identity}
+  Block8:
+    n_layers: 1
+    type: MambaPhi
+    input: {resid_dropout: 0.0}
+    weights_init: {mlp: teacher, norm: teacher}
+    Layer:
+      type: PhiAttention
+      input: {flash_attention: true}
+      weights_init: {attention: teacher}
+
+  Block9:
+    n_layers: 1
+    type: MambaPhi    
+    input: {resid_dropout: 0.0}
+    weights_init: {mlp: teacher, norm: teacher}
+    Layer:
+      type: DiscreteMamba2
+      input: {d_state: 64, n_qk_heads: 32, n_v_heads: 32, expand: 1, activation: identity, use_ref_impl: false, bias: false, norm_cls: none}
+      weights_init: {a_log: default, x: default, B: default, C: default, D: default, z: identity, out: default, convolution: identity}

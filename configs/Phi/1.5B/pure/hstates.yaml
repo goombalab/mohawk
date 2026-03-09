@@ -1,0 +1,6 @@
+LOAD:
+  - ./configs/Phi/1.5B/base/_hstates.yaml
+  - ./configs/Phi/1.5B/base/phi_mamba2.yaml
+
+DistillConfig:
+  name: phi_mamba

@@ -1,0 +1,7 @@
+TeacherConfig:
+  dir: tiiuae/Falcon3-Mamba-7B-Instruct
+  model_dtype: float32
+  mixed_precision: true
+  activation_checkpointing: false
+  compile_model: false
+  sharding_strategy: HYBRID_SHARD

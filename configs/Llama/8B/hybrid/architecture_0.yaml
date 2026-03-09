@@ -1,0 +1,34 @@
+# ATTN_BIAS: true
+ARCH_NAME: Hybrid-8B-ARCH1
+ROPE_INPUT: {
+  factor: !!float 8,
+  low_freq_factor: !!float 1,
+  high_freq_factor: !!float 4,
+  original_max_position_embeddings: 8192,
+  rope_type: llama3,
+  }
+
+
+ComponentsConfig:
+  name: LayeredMambaLM
+  input: {vocab_size: 128256, tie_embeddings: false, pad_vocab_size_multiple: 8, lm_head_bias: false}
+  MixerModel:
+    name: LlamaModel
+    input: {d_model: 4096, n_layer: 32, lm_head_prenorm: rms}
+    Blocks:
+    - name: ${BLOCK_NAME}
+      n_layers: 32
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 0
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          rope_scaling: ${ROPE_INPUT}

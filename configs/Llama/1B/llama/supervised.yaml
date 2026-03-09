@@ -1,0 +1,29 @@
+LOAD:
+- ./configs/Llama/1B/bases/_supervised.yaml
+# - ./configs/Llama/1B/bases/_post_supervised.yaml
+- ./configs/Llama/1B/llama/llama_architecture.yaml
+
+DistillConfig:
+  name: llama
+
+TrainConfig:
+  init_fn: eager # lazy, eager
+
+
+LoadConfig:
+  model:
+    - null # ignore previous LoadConfig.model entries
+    - path: ${TeacherConfig.dir}
+      allow_missing_keys: false # mixer keys are missing
+      allow_unexpected_keys: false # all keys from the teacher model are expected
+      rename: {
+        # order matters
+        'model.': 'backbone.', 
+        'self_attn.': 'mixer.self_attn.', 
+        'module.': '',
+        'embed_tokens.': 'embedding.',
+        '.norm.': '.final_layernorm.',
+        }
+      black_list: [
+        lm_head,   # <- lm_head is tied to the embedding layer, no need to load it
+      ]

@@ -1,0 +1,27 @@
+
+
+
+LoadConfig:
+  model:
+      # Load the teacher model into pure mamba
+    - path: ${TeacherConfig.dir}
+      strict: false
+      allow_missing_keys: true # mixer keys are missing
+      allow_unexpected_keys: false # all keys from the teacher model are expected
+      rename: {
+        # order matters
+        'model.': 'backbone.', 
+        'module.': '',
+        'embed_tokens.': 'embedding.',
+        '.norm.': '.final_layernorm.',
+        }
+      black_list: []
+      white_list: [
+        # lm_head, <- lm_head is tied to the embedding layer, no need to load it
+        embedding,
+        # self_attn,
+        mlp,
+        input_layernorm,
+        post_attention_layernorm,
+        final_layernorm,
+      ]

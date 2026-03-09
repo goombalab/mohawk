@@ -1,0 +1,42 @@
+LOAD: 
+# - ./configs/Falcon/7B/bases/load.yaml
+- ./configs/Falcon/7B/bases/teacher.yaml
+- ./configs/Falcon/7B/bases/optimizer.yaml
+- ./configs/Falcon/7B/bases/train.yaml
+- ./configs/management.yaml
+
+DistillConfig:
+  type: supervised
+
+OptimizerConfig:
+  lr: 1.0e-05
+
+TrainConfig:
+  n_tokens: !!float 2e10
+
+TrainDataConfig:
+  loaders: [RoundRobinLoader, PackingDataLoader, TorchDataLoader]
+  RoundRobinLoader:
+    train_data_configs:
+    - !load_yaml ./configs/data/fineweb_edu.yaml
+    # - !load_yaml ./configs/data/finemath.yaml
+  PackingDataLoader:
+    max_seq_len: 2048
+  TorchDataLoader:
+    num_workers: 0
+    batch_size: 8
+
+
+EvalConfig:
+
+- Evaluation: benchmark
+  frequency: 500
+  batch_size: 16
+  max_length: 2048
+  mixed_precision: true
+  eval_at_start: true
+  eval_at_end: true
+  tokenizer: ${TrainConfig.tokenizer}
+  tasks: ["arc_challenge", "arc_easy", "hellaswag", "piqa", "winogrande", "openbookqa", "lambada_openai", "mmlu"] #, "storycloze", "ifeval", "okapi"]
+  enable_tqdm: false
+  save_latest: false

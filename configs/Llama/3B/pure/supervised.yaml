@@ -1,0 +1,29 @@
+LOAD:
+# - ./configs/Llama/3B/bases/_supervised.yaml
+- ./configs/Llama/3B/bases/_post_supervised.yaml
+- ./configs/Llama/3B/bases/llama_mamba2.yaml
+
+DistillConfig:
+  name: pure_3B_C4
+  teacher_model: ${TeacherConfig.dir}
+
+OptimizerConfig:
+  lr: 1.0e-07
+
+
+TrainDataConfig:
+  loaders: [RoundRobinLoader, PackingDataLoader, TorchDataLoader]
+  RoundRobinLoader:
+    ratio: [5, 1]
+    train_data_configs:
+    - !load_yaml ./configs/data/c4.yaml
+    - !load_yaml ./configs/data/kv_retrieval.yaml
+  PackingDataLoader:
+    max_seq_len: 2048
+  TorchDataLoader:
+    num_workers: 0
+    batch_size: 8
+
+LoadConfig:
+  model:
+    - path: <path-to-checkpoint>  # Replace with your checkpoint path

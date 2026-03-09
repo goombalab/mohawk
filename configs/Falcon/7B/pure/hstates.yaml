@@ -1,0 +1,6 @@
+LOAD:
+- ./configs/Falcon/7B/bases/_hstates.yaml
+- ./configs/Falcon/7B/bases/falcon.yaml
+
+DistillConfig:
+  name: pure_7B

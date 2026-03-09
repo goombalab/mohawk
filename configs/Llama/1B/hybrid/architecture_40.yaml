@@ -1,0 +1,325 @@
+
+
+
+ARCH_NAME: Hybrid-Llama3.2-1B-ARCH40
+ROPE_INPUT: {
+  factor: !!float 8,
+  low_freq_factor: !!float 1,
+  high_freq_factor: !!float 4,
+  original_max_position_embeddings: 8192,
+  rope_type: llama3,
+  }
+
+
+ComponentsConfig:
+  name: LayeredMambaLM
+  input: {vocab_size: 128256, tie_embeddings: true, pad_vocab_size_multiple: 8, lm_head_bias: false}
+  MixerModel:
+    name: LlamaModel
+    input:
+      d_model: 2048
+      n_layer: 16
+      lm_head_prenorm: rms
+      norm_epsilon: !!float 1e-5
+      rope_scaling: ${ROPE_SCALING}
+      rope_theta: 500000.0
+      max_position_embeddings: 131072
+    Blocks:
+    ###############################################################################
+    #  L0  – heads = [3, 7, 11, 20]  → 4
+    ###############################################################################
+    - name: ${BLOCK_NAME}
+      n_layers: 1          # L0
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name:  ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 4      # layer-0
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 64
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          
+
+    ###############################################################################
+    #  L1  – heads = [28]             → 1
+    ###############################################################################
+    - name: ${BLOCK_NAME}
+      n_layers: 1          # L1
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name:  ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 1      # layer-1
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 64
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          
+
+    ###############################################################################
+    #  L2  – no mapped heads          → 0
+    ###############################################################################
+    - name: ${BLOCK_NAME}
+      n_layers: 1          # L2
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name:  ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 0
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 64
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          
+
+    ###############################################################################
+    #  L3  – heads = [8, 15, 16, 29]  → 4
+    ###############################################################################
+    - name: ${BLOCK_NAME}
+      n_layers: 1          # L3
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name:  ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 4
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 64
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          
+
+    ###############################################################################
+    #  L4  – heads = [4, 6, 11, 26]   → 4
+    ###############################################################################
+    - name: ${BLOCK_NAME}
+      n_layers: 1          # L4
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name:  ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 4
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 64
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          
+
+    ###############################################################################
+    #  L5  – heads = [1, 4, 5, 13, 17, 18, 27, 31]  → 8
+    ###############################################################################
+    - name: ${BLOCK_NAME}
+      n_layers: 1          # L5
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name:  ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 8
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 64
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          
+
+    ###############################################################################
+    #  L6  – heads = [15, 31]         → 2
+    ###############################################################################
+    - name: ${BLOCK_NAME}
+      n_layers: 1          # L6
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name:  ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 2
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 64
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          
+
+    ###############################################################################
+    #  L7  – heads = [13, 22, 24]     → 3
+    ###############################################################################
+    - name: ${BLOCK_NAME}
+      n_layers: 1          # L7
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name:  ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 3
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 64
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          
+
+    ###############################################################################
+    #  L8  – heads = [5, 16, 19, 20, 21, 30]  → 6
+    ###############################################################################
+    - name: ${BLOCK_NAME}
+      n_layers: 1          # L8
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name:  ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 6
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 64
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          
+
+    ###############################################################################
+    #  L9  – heads = [12, 25]         → 2
+    ###############################################################################
+    - name: ${BLOCK_NAME}
+      n_layers: 1          # L9
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name:  ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 2
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 64
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          
+
+    ###############################################################################
+    #  L10 – heads = [9, 20, 26]      → 3
+    ###############################################################################
+    - name: ${BLOCK_NAME}
+      n_layers: 1          # L10
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name:  ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 3
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 64
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          
+
+    ###############################################################################
+    #  L11 – heads = [8]              → 1
+    ###############################################################################
+    - name: ${BLOCK_NAME}
+      n_layers: 1          # L11
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name:  ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 1
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 64
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          
+
+    ###############################################################################
+    #  L12 – heads = [3]              → 1
+    ###############################################################################
+    - name: ${BLOCK_NAME}
+      n_layers: 1          # L12
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name:  ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 1
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 64
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          
+
+    ###############################################################################
+    #  L13 & L14 – no mapped heads    → 0
+    ###############################################################################
+    - name: ${BLOCK_NAME}
+      n_layers: 2
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name:  ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 0
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 64
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          
+    ###############################################################################
+    #  L15 – heads = [14]             → 1
+    ###############################################################################
+    - name: ${BLOCK_NAME}
+      n_layers: 1          # L15
+      input: ${BLOCK_INPUT}
+      ssm_layer:
+        name:  ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 1
+          attention_bias: ${ATTN_BIAS}
+          head_dim: 64
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          

@@ -1,0 +1,43 @@
+LOAD:
+  - ./configs/Phi/1.5B/base/optimizer.yaml
+  - ./configs/Phi/1.5B/base/train.yaml
+  - ./configs/management.yaml
+  - ./configs/Phi/1.5B/base/load.yaml
+
+DistillConfig:
+  teacher_model: microsoft/phi-1_5
+  type: hstates
+
+TrainConfig:
+  DataConfig:
+    n_tokens: !!float 1e10
+
+EvalConfig:
+
+- Evaluation: benchmark
+  frequency: 10
+  batch_size: 32
+  mixed_precision: true
+  eval_at_start: true
+  eval_at_end: true
+  tasks: ["arc_challenge", "arc_easy", "hellaswag", "piqa", "winogrande", "lambada_openai", "mmlu"]
+  enable_tqdm: false
+  save_latest: false
+
+- Evaluation: eval_hstates
+  frequency: 10
+  eval_at_start: true
+  eval_at_end: true
+  save_latest: true
+  mixed_precision: true
+  DataConfig:
+    data_dir: <path-to-c4-dataset>  # Replace with your C4 dataset path
+    loader: C4DataLoader
+    dataset_type: classic
+    tokenizer: ${DistillConfig.teacher_model}
+    cycle: false
+    num_workers: 4
+    max_seq_len: 2048
+    seed: 42
+    batch_size: 16
+    n_tokens: !!float 1e7

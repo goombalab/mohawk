@@ -1,0 +1,320 @@
+# 5 = [14] -> 1
+# 8 = [8] -> 1
+# 12 = [1, 2] -> 2
+# 13 = [5, 17, 23] -> 3
+# 14 = [6, 7] -> 2
+# 15 = [18] -> 1
+
+
+ARCH_NAME: Hybrid-3B-ARCH20
+ROPE_INPUT: {
+  factor: !!float 8,
+  low_freq_factor: !!float 1,
+  high_freq_factor: !!float 4,
+  original_max_position_embeddings: 8192,
+  rope_type: llama3,
+  }
+
+  
+ComponentsConfig:
+  name: LayeredMambaLM
+  input: {vocab_size: 128256, tie_embeddings: true, pad_vocab_size_multiple: 8, lm_head_bias: false}
+
+  MixerModel:
+    name: LlamaModel
+    input: {d_model: 3072, n_layer: 28, lm_head_prenorm: rms}
+
+    Blocks:
+    # ----- Layers 0-4 -------------------------------------------------------
+    - name: ${BLOCK_NAME}             # layer-0
+      n_layers: 1
+      input: {resid_dropout: 0.0, mlp_intermediate_size: 8192, mlp_act_fn: silu}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 1      # 0 = [4]
+          attention_bias: false
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          rope_scaling: ${ROPE_INPUT}
+
+    - name: ${BLOCK_NAME}             # layer-1
+      n_layers: 1
+      input: {resid_dropout: 0.0, mlp_intermediate_size: 8192, mlp_act_fn: silu}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 0
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          rope_scaling: ${ROPE_INPUT}
+
+    - name: ${BLOCK_NAME}             # layer-2
+      n_layers: 1
+      input: {resid_dropout: 0.0, mlp_intermediate_size: 8192, mlp_act_fn: silu}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 0
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          rope_scaling: ${ROPE_INPUT}
+
+    - name: ${BLOCK_NAME}             # layer-3
+      n_layers: 1
+      input: {resid_dropout: 0.0, mlp_intermediate_size: 8192, mlp_act_fn: silu}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 1      # 3 = [18]
+          attention_bias: false
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          rope_scaling: ${ROPE_INPUT}
+
+    - name: ${BLOCK_NAME}             # layer-4
+      n_layers: 1
+      input: {resid_dropout: 0.0, mlp_intermediate_size: 8192, mlp_act_fn: silu}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 0
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          rope_scaling: ${ROPE_INPUT}
+
+    # ----- Layers 5-6 (shared) ---------------------------------------------
+    - name: ${BLOCK_NAME}             # layers-5-6
+      n_layers: 2
+      input: {resid_dropout: 0.0, mlp_intermediate_size: 8192, mlp_act_fn: silu}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 0
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          rope_scaling: ${ROPE_INPUT}
+
+    # ----- Layer 7 ----------------------------------------------------------
+    - name: ${BLOCK_NAME}             # layer-7
+      n_layers: 1
+      input: {resid_dropout: 0.0, mlp_intermediate_size: 8192, mlp_act_fn: silu}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 0
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          rope_scaling: ${ROPE_INPUT}
+
+    # ----- Layer 8 ----------------------------------------------------------
+    - name: ${BLOCK_NAME}             # layer-8
+      n_layers: 1
+      input: {resid_dropout: 0.0, mlp_intermediate_size: 8192, mlp_act_fn: silu}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 1      # 8 = [8]
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          rope_scaling: ${ROPE_INPUT}
+
+    # ----- Layers 9-10 (shared) --------------------------------------------
+    - name: ${BLOCK_NAME}             # layers-9-10
+      n_layers: 2
+      input: {resid_dropout: 0.0, mlp_intermediate_size: 8192, mlp_act_fn: silu}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 2      # 9 = [1,18]  | 10 = [3,17]
+          attention_bias: false
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          rope_scaling: ${ROPE_INPUT}
+
+    # ----- Layer 11 ---------------------------------------------------------
+    - name: ${BLOCK_NAME}             # layer-11
+      n_layers: 1
+      input: {resid_dropout: 0.0, mlp_intermediate_size: 8192, mlp_act_fn: silu}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 1      # 11 = [10]
+          attention_bias: false
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          rope_scaling: ${ROPE_INPUT}
+
+    # ----- Layer 12 ---------------------------------------------------------
+    - name: ${BLOCK_NAME}             # layer-12
+      n_layers: 1
+      input: {resid_dropout: 0.0, mlp_intermediate_size: 8192, mlp_act_fn: silu}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 4      # 12 = [0,1,8,13]
+          attention_bias: false
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          rope_scaling: ${ROPE_INPUT}
+
+    # ----- Layer 13 ---------------------------------------------------------
+    - name: ${BLOCK_NAME}             # layer-13
+      n_layers: 1
+      input: {resid_dropout: 0.0, mlp_intermediate_size: 8192, mlp_act_fn: silu}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 2      # 13 = [5,16]
+          attention_bias: false
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          rope_scaling: ${ROPE_INPUT}
+
+    # ----- Layer 14 ---------------------------------------------------------
+    - name: ${BLOCK_NAME}             # layer-14
+      n_layers: 1
+      input: {resid_dropout: 0.0, mlp_intermediate_size: 8192, mlp_act_fn: silu}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 3      # 14 = [0,6,7]
+          attention_bias: false
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          rope_scaling: ${ROPE_INPUT}
+
+    # ----- Layer 15 ---------------------------------------------------------
+    - name: ${BLOCK_NAME}             # layer-15
+      n_layers: 1
+      input: {resid_dropout: 0.0, mlp_intermediate_size: 8192, mlp_act_fn: silu}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 2      # 15 = [18,20]
+          attention_bias: false
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          rope_scaling: ${ROPE_INPUT}
+
+    # ----- Layers 16-18 (shared, no heads) ----------------------------------
+    - name: ${BLOCK_NAME}             # layers-16-18
+      n_layers: 3
+      input: {resid_dropout: 0.0, mlp_intermediate_size: 8192, mlp_act_fn: silu}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 0
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          rope_scaling: ${ROPE_INPUT}
+
+    # ----- Layer 19 ---------------------------------------------------------
+    - name: ${BLOCK_NAME}             # layer-19
+      n_layers: 1
+      input: {resid_dropout: 0.0, mlp_intermediate_size: 8192, mlp_act_fn: silu}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 1      # 19 = [7]
+          attention_bias: false
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          rope_scaling: ${ROPE_INPUT}
+
+    # ----- Layers 20-27 (shared, no heads) ----------------------------------
+    - name: ${BLOCK_NAME}             # layers-20-27
+      n_layers: 8
+      input: {resid_dropout: 0.0, mlp_intermediate_size: 8192, mlp_act_fn: silu}
+      ssm_layer:
+        name: ${SSM_MIXER}
+        input: ${SSM_INPUT}
+      attn_layer:
+        name: LlamaAttention
+        input:
+          num_attention_heads: 0
+          head_dim: 128
+          _attn_implementation: flash_attention_2
+          rope_theta: 500000
+          max_position_embeddings: 131072
+          rope_scaling: ${ROPE_INPUT}

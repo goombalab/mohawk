@@ -1,0 +1,19 @@
+TrainConfig:
+  seed: 42
+  activation_checkpointing: false
+  mixed_precision: true  
+  model_dtype: bfloat16
+  sharding_strategy: HYBRID_SHARD # HYBRID_SHARD, NO_SHARD, or FULL_SHARD
+  DataConfig:
+    data_dir: HuggingFaceFW/fineweb-edu
+    loader: HFDataset
+    tokenizer: ${DistillConfig.teacher_model}
+    aggregation_size: 2_000
+    streaming: true
+    num_workers: 4
+    max_seq_len: 2048
+    seed: 42
+    batch_size: 16
+    # n_tokens: !!float 2e9
+    effective_batch_size: 128  # don't divide by n_gpus
+    shuffle: true

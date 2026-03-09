@@ -1,0 +1,12 @@
+LOAD:
+- ./configs/Llama/1B/bases/_matrices.yaml
+- ./configs/Llama/1B/bases/llama.yaml
+
+DistillConfig:
+  name: llama
+
+TrainConfig:
+  activation_checkpointing: true
+  DataConfig:
+    batch_size: 1
+    effective_batch_size: 64

@@ -1,0 +1,10 @@
+TrainConfig:
+  seed: 42
+  activation_checkpointing: true
+  compile_model: false
+  mixed_precision: true  
+  model_dtype: float32
+  sharding_strategy: HYBRID_SHARD
+  effective_batch_size: 128
+  n_tokens: !!float 1e7
+  tokenizer: ${TeacherConfig.dir}

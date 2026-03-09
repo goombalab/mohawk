@@ -1,0 +1,10 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: allenai/c4
+    # name: en
+    name: en.noclean
+    streaming: true
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: text

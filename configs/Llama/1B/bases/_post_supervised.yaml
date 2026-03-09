@@ -1,0 +1,43 @@
+LOAD: 
+- ./configs/Llama/1B/bases/teacher.yaml
+- ./configs/Llama/1B/bases/optimizer.yaml
+- ./configs/Llama/1B/bases/train.yaml
+- ./configs/management.yaml
+DistillConfig:
+  type: supervised
+
+OptimizerConfig:
+  lr: 1.0e-06
+
+TrainConfig:
+  n_tokens: !!float 8e9
+
+TrainDataConfig:
+  loaders: [RoundRobinLoader, PackingDataLoader, CycleDataLoader, TorchDataLoader]
+  RoundRobinLoader:
+    train_data_configs:
+    # - !load_yaml ./configs/data/fineweb_edu.yaml
+    - !load_yaml ./configs/data/OpenMathInstruct2.yaml
+    - !load_yaml ./configs/data/open_hermes_2.5.yaml
+  PackingDataLoader:
+    max_seq_len: 2048
+  CycleDataLoader:
+    num_cycles: !!float inf
+  TorchDataLoader:
+    num_workers: 0
+    batch_size: 8
+
+
+EvalConfig:
+
+- Evaluation: benchmark
+  frequency: 1000
+  batch_size: 16
+  max_length: 4096
+  mixed_precision: true
+  eval_at_start: true
+  eval_at_end: true
+  tokenizer: ${TrainConfig.tokenizer}
+  tasks: ["lambada_openai", "mmlu", "gsm8k", "ifeval", "swde"] # ["swde"] #["hendrycks_math", "swde", "mmlu_pro"]
+  enable_tqdm: false
+  save_latest: true

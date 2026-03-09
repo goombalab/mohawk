@@ -1,0 +1,7 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: open-r1/codeforces
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: instruction

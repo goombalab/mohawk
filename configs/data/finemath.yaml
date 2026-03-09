@@ -1,0 +1,9 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: HuggingFaceTB/finemath
+    name: finemath-4plus
+    # streaming: true
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: text

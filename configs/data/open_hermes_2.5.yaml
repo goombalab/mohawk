@@ -1,0 +1,7 @@
+TrainDataConfig:
+  loaders: [HFDataset, Tokenize]
+  HFDataset:
+    path: teknium/OpenHermes-2.5
+  Tokenize:
+    tokenizer: ${TeacherConfig.dir}
+    collate_type: conversation

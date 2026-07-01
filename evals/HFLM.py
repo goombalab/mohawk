@@ -17,8 +17,6 @@ from accelerate import (
 from accelerate.utils import get_max_memory
 from huggingface_hub import HfApi
 from packaging import version
-from peft import PeftModel
-from peft import __version__ as PEFT_VERSION
 from tqdm import tqdm
 from transformers.models.auto.modeling_auto import (
     MODEL_FOR_CAUSAL_LM_MAPPING_NAMES,
@@ -30,13 +28,23 @@ from lm_eval.api.instance import Instance
 from lm_eval.api.model import TemplateLM
 from lm_eval.models.utils import (
     Collator,
-    clear_torch_cache,
     configure_pad_token,
-    get_dtype,
     handle_stop_sequences,
-    pad_and_concat,
-    stop_sequences_criteria,
 )
+try:
+    from lm_eval.models.utils_hf import (
+        clear_torch_cache,
+        get_dtype,
+        pad_and_concat,
+        stop_sequences_criteria,
+    )
+except ImportError:
+    from lm_eval.models.utils import (
+        clear_torch_cache,
+        get_dtype,
+        pad_and_concat,
+        stop_sequences_criteria,
+    )
 
 # disable_tqdm = "SLURM_JOB_ID" in os.environ # disable tqdm if running in a SLURM job
 
@@ -87,8 +95,7 @@ class HFLM(TemplateLM):
         max_memory_per_gpu: Optional[Union[int, str]] = None,
         max_cpu_memory: Optional[Union[int, str]] = None,
         offload_folder: Optional[Union[str, os.PathLike]] = "./offload",
-        # PEFT, delta weights and quantization options
-        peft: Optional[str] = None,
+        # delta weights and quantization options
         delta: Optional[str] = None,
         autogptq: Optional[Union[bool, str]] = False,
         gptqmodel: Optional[bool] = False,
@@ -177,7 +184,7 @@ class HFLM(TemplateLM):
             config=self.config, backend=backend, trust_remote_code=trust_remote_code
         )
 
-        # load tokenizer so we know tokenizer vocabulary size before loading model and PEFT
+        # Load the tokenizer before model initialization.
         self._create_tokenizer(
             pretrained,
             tokenizer,
@@ -200,7 +207,6 @@ class HFLM(TemplateLM):
                 max_memory_per_gpu=max_memory_per_gpu,
                 max_cpu_memory=max_cpu_memory,
                 offload_folder=offload_folder,
-                peft=peft,
                 delta=delta,
                 autogptq=autogptq,
                 gptqmodel=gptqmodel,
@@ -229,7 +235,6 @@ class HFLM(TemplateLM):
         self._max_length = max_length
         self.pretrained = pretrained
         self.delta = delta
-        self.peft = peft
         self.revision = revision
         self.batch_schedule = 1
         self.batch_sizes = {}
@@ -542,8 +547,7 @@ class HFLM(TemplateLM):
         max_memory_per_gpu: Optional[Union[int, str]] = None,
         max_cpu_memory: Optional[Union[int, str]] = None,
         offload_folder: Optional[str] = "./offload",
-        # PEFT, delta weights and quantization options
-        peft: Optional[str] = None,
+        # delta weights and quantization options
         delta: Optional[str] = None,
         autogptq: Optional[Union[bool, str]] = False,
         gptqmodel: Optional[bool] = False,
@@ -554,7 +558,7 @@ class HFLM(TemplateLM):
         Initializes an HF or HF-compatible PreTrainedModel from scratch
         inside HFLM, using the kwargs passed into self.__init__().
 
-        Also handles functionality such as AutoGPTQ usage and PEFT wrapping.
+        Also handles functionality such as AutoGPTQ usage and delta weights.
 
         For future similar extensions to AutoGPTQ that are not core to HF's ecosystem,
         (such as PyTorch models that are nearly, but not quite, fully mirroring
@@ -633,25 +637,7 @@ class HFLM(TemplateLM):
                     pretrained, trust_remote_code=trust_remote_code, **model_kwargs
                 )
 
-        if peft and delta:
-            raise ValueError(
-                "Cannot use both 'peft' and 'delta' options at the same time."
-            )
-
-        if peft:
-            if model_kwargs.get("load_in_4bit", None):
-                if version.parse(PEFT_VERSION) < version.parse("0.4.0"):
-                    raise AssertionError("load_in_4bit requires peft >= 0.4.0")
-            if self._model.config.vocab_size != len(self.tokenizer):
-                # resize model for LoRAs with added tokens
-                eval_logger.info(
-                    f"Model config indicates vocab_size='{self._model.config.vocab_size}', but found tokenizer with vocab size '{len(self.tokenizer)}'. Resizing model embedding layer..."
-                )
-                self._model.resize_token_embeddings(len(self.tokenizer))
-            self._model = PeftModel.from_pretrained(
-                self._model, peft, revision=revision
-            )
-        elif delta:
+        if delta:
             if autogptq:
                 eval_logger.warning(
                     "Delta weights might trigger unexpected behavior when used with AutoGPTQ."
@@ -1486,8 +1472,6 @@ class HFLM(TemplateLM):
             "model_revision": self.revision,
             "model_sha": get_model_sha(self.pretrained, self.revision),
         }
-        if self.peft:
-            model_info["peft_sha"] = get_model_sha(self.peft, self.revision)
         if self.delta:
             model_info["delta_sha"] = get_model_sha(self.delta, self.revision)
         return model_info

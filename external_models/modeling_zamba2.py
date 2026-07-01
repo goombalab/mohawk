@@ -531,8 +531,8 @@ class Zamba2FlashAttention2(Zamba2Attention):
         value_states = repeat_kv(value_states, self.num_key_value_groups)
         dropout_rate = 0.0 if not self.training else self.attention_dropout
 
-        # In PEFT, usually we cast the layer norms in float32 for training stability reasons
-        # therefore the input hidden states gets silently casted in float32. Hence, we need
+        # Some training setups cast layer norms to float32 for stability, which can
+        # silently cast the input hidden states to float32. Hence, we need to
         # cast them back in float16 just to be sure everything works as expected.
         input_dtype = query_states.dtype
         if input_dtype == torch.float32:

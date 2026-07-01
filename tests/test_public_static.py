@@ -77,9 +77,15 @@ def test_hybrid_attention_backend_and_doubleblock_factory_placement_contracts():
         assert 'attn_implementation != "flash_attention_2"' in source
         assert 'self.model_cfg["_attn_implementation"] = attn_implementation' in source
 
+    factory_source = (ROOT / "components/_factory.py").read_text()
+    assert "def apply_module_factory_kwargs(" in factory_source
+
     doubleblock_source = (ROOT / "components/blocks/DoubleBlock.py").read_text()
-    assert "def _to_factory_dtype_device" in doubleblock_source
-    assert "self.mlp = _to_factory_dtype_device" in doubleblock_source
+    assert (
+        "from components._factory import apply_module_factory_kwargs"
+        in doubleblock_source
+    )
+    assert "self.mlp = apply_module_factory_kwargs" in doubleblock_source
     assert "self.adapter = Adapter(d_model, config, factory_kwargs)" in doubleblock_source
     assert "factory_kwargs=factory_kwargs" in doubleblock_source
 

@@ -1,10 +1,43 @@
+import inspect
+
+
+def _missing_loader(name, exc):
+    def raise_missing_dependency(*args, **kwargs):
+        raise ImportError(
+            f"{name} requires an optional dependency that is not installed: {exc}"
+        ) from exc
+
+    raise_missing_dependency.__name__ = name
+    return raise_missing_dependency
+
+
 # DATAGENERATORS
-from dataloaders.DataGenerators.C4DataLoader import C4DataLoader
-from dataloaders.DataGenerators.HFDataset import HFDataset
+try:
+    from dataloaders.DataGenerators.C4DataLoader import C4DataLoader
+except ModuleNotFoundError as exc:
+    C4DataLoader = _missing_loader("C4DataLoader", exc)
+
+try:
+    from dataloaders.DataGenerators.HFDataset import HFDataset
+except ModuleNotFoundError as exc:
+    HFDataset = _missing_loader("HFDataset", exc)
+
 from dataloaders.DataGenerators.JSONIterableDataset import JSONIterableDataset
-from dataloaders.DataGenerators.CopyingTaskDataset import CopyingTaskDataset
-from dataloaders.DataGenerators.NeedleInHaystackDataset import NeedleInHaystackDataset
-from dataloaders.DataGenerators.KVRetrieval import KVRetrieval
+
+try:
+    from dataloaders.DataGenerators.CopyingTaskDataset import CopyingTaskDataset
+except ModuleNotFoundError as exc:
+    CopyingTaskDataset = _missing_loader("CopyingTaskDataset", exc)
+
+try:
+    from dataloaders.DataGenerators.NeedleInHaystackDataset import NeedleInHaystackDataset
+except ModuleNotFoundError as exc:
+    NeedleInHaystackDataset = _missing_loader("NeedleInHaystackDataset", exc)
+
+try:
+    from dataloaders.DataGenerators.KVRetrieval import KVRetrieval
+except ModuleNotFoundError as exc:
+    KVRetrieval = _missing_loader("KVRetrieval", exc)
 
 # DATAWRAPPERS
 from dataloaders.DataWrappers.RoundRobinLoader import RoundRobinLoader
@@ -31,6 +64,7 @@ DATASETS = {
     "ShuffleLoader": ShuffleLoader,
     "PackingDataLoader": PackingDataLoader,
     "Tokenize": TokenizedDataLoader,
+    "TokenizedDataLoader": TokenizedDataLoader,
     "AggregationDataLoader": AggregationDataLoader,
     "TorchDataLoader": TorchDataLoader,
     "PaddingDataLoader": PaddingDataLoader,
@@ -40,14 +74,23 @@ DATASETS = {
     "KVRetrieval": KVRetrieval,
 }
 
-def filter_kwargs(cls, kwargs):
+def filter_kwargs(cls, kwargs, include_var_keyword=False):
     """
     Filter the kwargs to only include the ones that are in the class __init__ method.
     """
-    # Get the names of the arguments in the __init__ method
-    init_args = cls.__init__.__code__.co_varnames
-    # Filter the kwargs to only include the ones that are in the init_args
-    return {k: v for k, v in kwargs.items() if k in init_args}
+    target = cls if inspect.isfunction(cls) else cls.__init__
+    signature = inspect.signature(target)
+    if include_var_keyword and any(
+        param.kind == param.VAR_KEYWORD for param in signature.parameters.values()
+    ):
+        return dict(kwargs)
+    accepted = {
+        name
+        for name, param in signature.parameters.items()
+        if param.kind in {param.POSITIONAL_OR_KEYWORD, param.KEYWORD_ONLY}
+        and name != "self"
+    }
+    return {k: v for k, v in kwargs.items() if k in accepted}
 
 def setup_dataloader(data_cfg, **kwargs):
 
@@ -57,7 +100,16 @@ def setup_dataloader(data_cfg, **kwargs):
         # Check if the loader is a composite loader
         _kwargs = filter_kwargs(loader_cls, kwargs)
         _kwargs.update(filter_kwargs(loader_cls, data_cfg))
-        _kwargs.update(filter_kwargs(loader_cls, data_cfg[loader_name]))
+        _kwargs.update(
+            filter_kwargs(
+                loader_cls,
+                data_cfg[loader_name],
+                include_var_keyword=True,
+            )
+        )
         # Instantiate the loader
-        final_loader = loader_cls(iterable=final_loader, **_kwargs)
+        if inspect.isfunction(loader_cls) and "data_cfg" in inspect.signature(loader_cls).parameters:
+            final_loader = loader_cls(data_cfg=data_cfg[loader_name], **_kwargs)
+        else:
+            final_loader = loader_cls(iterable=final_loader, **_kwargs)
     return final_loader

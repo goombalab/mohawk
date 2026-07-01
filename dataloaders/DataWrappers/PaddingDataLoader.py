@@ -28,7 +28,7 @@ class PaddingDataLoader(BaseDataWrapper):
         """
         Pad sequence to max_seq_len.
         """
-        seq = seq.squeeze()
+        seq = seq.reshape(-1)
         pad_len = self.max_seq_len - seq.size(0)
         assert seq.dim() == 1, f"Expected 1D tensor, got {seq.dim()}D tensor"
 

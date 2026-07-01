@@ -1,10 +1,13 @@
 import torch
-from transformers import AutoTokenizer
+from utils.build_model import get_tokenizer
 
 
 class RandomDataLoader:
     def __init__(self, data_cfg, **kwargs):
-        self.tokenizer = AutoTokenizer.from_pretrained(data_cfg.tokenizer)
+        self.tokenizer = get_tokenizer(
+            data_cfg.tokenizer,
+            local_files_only=data_cfg.get("local_files_only", False),
+        )
         self.vocab_size = self.tokenizer.vocab_size
         special_tokens_map = self.tokenizer.special_tokens_map
         for key, value in special_tokens_map.items():

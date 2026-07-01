@@ -20,8 +20,10 @@ class BaseDataWrapper(IterableDataset):
     def __getattr__(self, attr):
         if attr in self.__dict__:
             return self.__dict__[attr]
-        elif hasattr(self.iterable, attr):
+        try:
             return getattr(self.iterable, attr)
+        except (AttributeError, NotImplementedError):
+            pass
         raise AttributeError(f"Neither TorchDataLoader nor iterable have the attribute '{attr}'")
 
     def state_dict(self):
@@ -29,6 +31,14 @@ class BaseDataWrapper(IterableDataset):
         Data wrappers are stateless, so we just return the state dict of the iterable.
         """
         return self.iterable.state_dict()
+
+    def close(self):
+        try:
+            close = getattr(self.iterable, "close")
+        except (AttributeError, NotImplementedError):
+            return
+        if close is not None:
+            close()
         
     def __str__(self, tabs=0, **kwargs):
         return f"---"*tabs + f"{self.__class__.__name__}\n" + self.iterable.__str__(tabs=tabs+1)

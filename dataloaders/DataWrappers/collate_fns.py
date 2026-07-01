@@ -84,6 +84,34 @@ def collate_fn_instruction(batch, tokenizer, chat_template=None, add_generation_
     Collate function for conversation datasets.
     An instruction template is for single-turn tasks (user gives a task, model outputs a response).
     """
+    if return_dict:
+        contexts = []
+        responses = []
+        for sample in batch:
+            context_keys = ["context", "input", "query", "problem"]
+            user_key = next((key for key in context_keys if key in sample.keys()), None)
+            response_keys = ["response", "output", "generated_solution", "solution"]
+            assistant_key = next((key for key in response_keys if key in sample.keys()), None)
+
+            if assistant_key is None:
+                raise ValueError(f"Missing instruction response in sample. Available keys: {list(sample.keys())}")
+
+            contexts.append(sample.get("instruction", "") + sample.get(user_key, ""))
+            responses.append(sample.get(assistant_key, ""))
+
+        return {
+            "input_ids": tokenizer(
+                contexts,
+                **common_tokenizer_args,
+                add_special_tokens=True,
+            )["input_ids"],
+            "response_ids": tokenizer(
+                responses,
+                **common_tokenizer_args,
+                add_special_tokens=False,
+            )["input_ids"],
+        }
+
     conversations = []
     
     # Iterate over the batch of samples

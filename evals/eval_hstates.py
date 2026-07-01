@@ -3,8 +3,15 @@ import torch.distributed as dist
 
 from dataloaders import setup_dataloader
 from evals.eval_api import EvalAPI
-from utils.distributed import barrier, local_rank, world_size
+from utils.distributed import barrier, get_device, world_size
 from utils.logging import logger
+
+
+def _get_hidden_states(outputs):
+    hidden_states = getattr(outputs, "hidden_states", None)
+    if hidden_states is None:
+        hidden_states = getattr(outputs, "all_hidden_states", None)
+    return hidden_states
 
 
 class evaluator(EvalAPI):
@@ -19,20 +26,21 @@ class evaluator(EvalAPI):
     def is_better(self, current_best, new):
         return new["eval_score"] < current_best["eval_score"]
 
-    @torch.inference_mode()
+    @torch.no_grad()
     def __call__(self, wrapper_model, wrapper_teacher, *args, **kwargs):
 
         logger.info(f"[EVAL] Evaluating hstates for {self.n_batches} batches")
 
         running_hstate_distance = 0
         num_hstates_seen = 0
+        device = get_device()
 
         wrapper_model.model.eval()
         torch.cuda.empty_cache()
         for idx, batch in enumerate(self.dataloader):
             if idx >= self.n_batches:
                 break
-            batch = {k: v.to(local_rank) for k, v in batch.items() if isinstance(v, torch.Tensor)}
+            batch = {k: v.to(device) for k, v in batch.items() if isinstance(v, torch.Tensor)}
 
             teacher_outputs = wrapper_teacher(
                 **batch,
@@ -40,21 +48,29 @@ class evaluator(EvalAPI):
                 output_attentions=False,
                 use_cache=False,
             )
+            teacher_hidden_states = _get_hidden_states(teacher_outputs)
+            assert teacher_hidden_states is not None, "Teacher model did not return hidden states."
+            teacher_pos_emb = getattr(teacher_outputs, "position_embeddings", None)
 
             for layer_idx in range(len(wrapper_model.module.backbone.layers)):
-                input = teacher_outputs.hidden_states[layer_idx].to(local_rank)
+                input = teacher_hidden_states[layer_idx].to(device)
 
                 # Forward pass
-                wrapper_model.module.forward_fn = "_layer_forward"
-                student_outputs = wrapper_model(
-                    layer_idx=layer_idx,
-                    hidden_states=input,
-                    return_mixer_matrix=False,
-                    return_hidden_states=True,
-                )
-                wrapper_model.module.forward_fn = "_forward"
-                teacher_hstate = teacher_outputs.hidden_states[layer_idx + 1]
-                teacher_hstate = teacher_hstate.to(local_rank)
+                original_forward_fn = wrapper_model.module.forward_fn
+                try:
+                    wrapper_model.module.forward_fn = "_layer_forward"
+                    student_outputs = wrapper_model(
+                        layer_idx=layer_idx,
+                        hidden_states=input,
+                        position_ids=batch.get("position_ids"),
+                        position_embeddings=teacher_pos_emb,
+                        return_mixer_matrix=False,
+                        return_hidden_states=True,
+                    )
+                finally:
+                    wrapper_model.module.forward_fn = original_forward_fn
+                teacher_hstate = teacher_hidden_states[layer_idx + 1]
+                teacher_hstate = teacher_hstate.to(device)
 
                 # Calculate hstates distance:
                 assert student_outputs["hidden_states"].size() == teacher_hstate.size()
@@ -71,8 +87,8 @@ class evaluator(EvalAPI):
         barrier()
 
         # Convert to tensors
-        running_hstate_distance = torch.tensor(running_hstate_distance).to(local_rank)
-        num_hstates_seen = torch.tensor(num_hstates_seen).to(local_rank)
+        running_hstate_distance = torch.tensor(running_hstate_distance).to(device)
+        num_hstates_seen = torch.tensor(num_hstates_seen).to(device)
 
         # Reduce
         if world_size > 1:

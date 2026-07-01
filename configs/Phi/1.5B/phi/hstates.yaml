@@ -20,11 +20,11 @@ TrainConfig:
   activation_checkpointing: false
   # sharding_strategy: HYBRID_SHARD
   sharding_strategy: NO_SHARD
-  DataConfig:
-    data_dir: HuggingFaceFW/fineweb-edu
-    loader: HFDataset
-    tokenizer: ${DistillConfig.teacher_model}
-    streaming: true
+  n_tokens: !!float 1e10
+  effective_batch_size: 1
+  tokenizer: ${TeacherConfig.dir}
+TrainDataConfig:
+  TorchDataLoader:
     batch_size: 1
 
 

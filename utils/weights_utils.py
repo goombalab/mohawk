@@ -379,6 +379,7 @@ def save_weights(model_state, tmp_dir, save_dir, opt_state=None, scheduler_state
         f.write(json.dumps(config.to_dict()).replace("\\n", "\n"))
 
     logger.info(f"[TRAINING_WRAPPER] Checkpoint saved successfully at {save_dir}")
+    return save_dir
 
 def _save_dict(state_dict, tmp_dir, save_dir, filename, safe_tensors=True):
     def move_to_cpu(obj):
@@ -406,4 +407,4 @@ def _save_dict(state_dict, tmp_dir, save_dir, filename, safe_tensors=True):
     # Move to save_dir
     os.makedirs(save_dir, exist_ok=True)
     os.system(f"mv -f {tmp_dir}/* {save_dir}")
-    return dir
+    return save_dir

@@ -10,3 +10,6 @@ DistillConfig:
 
 OptimizerConfig:
   lr: 2.0e-04
+
+TrainConfig:
+  n_tokens: !!float 1e9

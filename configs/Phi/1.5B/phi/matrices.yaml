@@ -1,8 +1,6 @@
 LOAD:
-  - ./configs/Phi/1.5B/base/optimizer.yaml
-  - ./configs/Phi/1.5B/base/train.yaml
-  - ./configs/management.yaml
-  - ./configs/Phi/1.5B/base/test15_phi_from_phi/components.yaml
+  - ./configs/Phi/1.5B/base/_matrices.yaml
+  - ./configs/Phi/1.5B/base/phi.yaml
   
 DistillConfig:
   name: test15_phi_from_phi
@@ -14,16 +12,6 @@ OptimizerConfig:
 
 TrainConfig:
   mixed_precision: false
-
-ComponentsConfig:
-  Block1:
-    Layer:
-      input: {flash_attention: false}
-
-DataConfig:
-  train:
+TrainDataConfig:
+  TorchDataLoader:
     batch_size: 2
-    n_tokens: !!float 1e9 # 10B, 5B, 2.5B, 1B, 0.5B, 0.25B
-  val:
-    batch_size: 16
-    n_tokens: !!float 4e6 

@@ -28,10 +28,9 @@ def move_meta_to_cpu(model: torch.nn.Module, params_map = {}):
         if buffer.device.type == 'meta':
             with torch.no_grad():
                 new_buffer = torch.empty_like(buffer, device='cpu')
-            # Sanity check: This will break if the buffer is a Parameter
-            if name in model._buffers:
-                is_persistent = True
-                assert not isinstance(model._buffers[name], torch.nn.Parameter), "Buffer is a Parameter!"
+            if isinstance(new_buffer, torch.nn.Parameter):
+                new_buffer = new_buffer.detach()
+            is_persistent = name not in model._non_persistent_buffers_set
             model.register_buffer(name, new_buffer, persistent=is_persistent)
 
     # Recursively handle submodules

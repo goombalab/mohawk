@@ -14,6 +14,18 @@ from transformers.models.qwen2.modeling_qwen2 import (
 import torch
 from components.registry import Registry
 
+
+def _to_factory_dtype_device(module, factory_kwargs):
+    move_kwargs = {k: v for k, v in factory_kwargs.items() if v is not None}
+    if not move_kwargs:
+        return module
+    tensors = list(module.parameters(recurse=True)) + list(module.buffers(recurse=True))
+    if any(tensor.device.type == "meta" for tensor in tensors):
+        dtype = move_kwargs.get("dtype")
+        return module.to(dtype=dtype) if dtype is not None else module
+    return module.to(**move_kwargs)
+
+
 class Block(nn.Module):
     def __init__(self, d_model, config, factory_kwargs, layer_idx, **kwargs):
         """
@@ -82,18 +94,32 @@ class Block(nn.Module):
                 hidden_act=config.input.mlp_act_fn,
             )
         )
+        self.input_layernorm = _to_factory_dtype_device(
+            self.input_layernorm, factory_kwargs
+        )
+        self.post_attention_layernorm = _to_factory_dtype_device(
+            self.post_attention_layernorm, factory_kwargs
+        )
+        self.mlp = _to_factory_dtype_device(self.mlp, factory_kwargs)
 
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None, **kwargs):
         ssm_cache = self.mixer1.allocate_inference_cache(
             batch_size, max_seqlen, dtype=dtype, **kwargs
         )
+        if isinstance(ssm_cache, dict):
+            cache = dict(ssm_cache)
+        else:
+            cache = {"mixer1": ssm_cache}
         if hasattr(self, "mixer2"):
             attn_cache = self.mixer2.allocate_inference_cache(
                 batch_size, max_seqlen, dtype=dtype, **kwargs
             )
-            return {"mixer1": ssm_cache, "mixer2": attn_cache}
+            if isinstance(attn_cache, dict):
+                cache.update(attn_cache)
+            elif attn_cache is not None:
+                cache["past_key_value"] = attn_cache
 
-        return {"mixer1": ssm_cache}
+        return cache
         
     def apply_mixers(self, *args, **kwargs):
         raise NotImplementedError("apply_mixers not implemented in base class")
@@ -151,11 +177,12 @@ class Normalize(nn.Module):
         return out_attn_scaled
 
 class Adapter(nn.Module):
-    def __init__(self, d_model, config):
+    def __init__(self, d_model, config, factory_kwargs):
         super().__init__()
         self.d_model = d_model
         self.config = config
         self.out_proj = nn.Linear(self.d_model, self.d_model, bias=True)
+        self.out_proj = _to_factory_dtype_device(self.out_proj, factory_kwargs)
         self.norm = Normalize(eps=1e-5)
 
     def forward(self, att_hidden_state, ssm_hidden_state, hidden_states):
@@ -167,7 +194,7 @@ class DoubleBlockAdapter(Block):
     def __init__(self, d_model, config, factory_kwargs, layer_idx, **kwargs):
         super().__init__(d_model, config, factory_kwargs, layer_idx, **kwargs)
         if hasattr(self, "mixer2"):
-            self.adapter = Adapter(d_model, config)
+            self.adapter = Adapter(d_model, config, factory_kwargs)
         
     def apply_mixers(self, hidden_states, position_ids=None, position_embeddings=None, inference_params=None, **kwargs):
         hidden_states = self.input_layernorm(hidden_states)
@@ -213,7 +240,7 @@ class DoubleBlockVanilla(Block):
     def __init__(self, d_model, config, factory_kwargs, layer_idx, **kwargs):
         super().__init__(d_model, config, factory_kwargs, layer_idx, **kwargs)
 
-    def apply_mixers(self, hidden_states, position_ids=None, position_embeddings=None, **kwargs):
+    def apply_mixers(self, hidden_states, position_ids=None, position_embeddings=None, inference_params=None, **kwargs):
         hidden_states = self.input_layernorm(hidden_states)
 
         # Apply Mixer1
@@ -221,6 +248,7 @@ class DoubleBlockVanilla(Block):
             hidden_states,
             position_ids=position_ids,
             position_embeddings=position_embeddings,
+            inference_params=inference_params,
             **kwargs,
         )
         if isinstance(ssm_outputs, Tensor):
@@ -233,6 +261,7 @@ class DoubleBlockVanilla(Block):
             hidden_states,
             position_ids=position_ids,
             position_embeddings=position_embeddings,
+            inference_params=inference_params,
             **kwargs,
         )
 
@@ -248,11 +277,18 @@ class DoubleBlockHymba(Block):
         RMSNorm = LlamaRMSNorm if config.attn_layer.name == "LlamaAttention" else Qwen2RMSNorm
         self.ssm_output_layernorm = RMSNorm(hidden_size=self.d_model, eps=1e-5)
         self.att_output_layernorm = RMSNorm(hidden_size=self.d_model, eps=1e-5)
-        self.ssm_gate = nn.Parameter(torch.zeros(d_model))
-        self.att_gate = nn.Parameter(torch.zeros(d_model))
+        self.ssm_output_layernorm = _to_factory_dtype_device(
+            self.ssm_output_layernorm, factory_kwargs
+        )
+        self.att_output_layernorm = _to_factory_dtype_device(
+            self.att_output_layernorm, factory_kwargs
+        )
+        self.ssm_gate = nn.Parameter(torch.zeros(d_model, **factory_kwargs))
+        self.att_gate = nn.Parameter(torch.zeros(d_model, **factory_kwargs))
         self.out_proj = nn.Linear(self.d_model, self.d_model, bias=True)
+        self.out_proj = _to_factory_dtype_device(self.out_proj, factory_kwargs)
 
-    def apply_mixers(self, hidden_states, position_ids=None, position_embeddings=None, **kwargs):
+    def apply_mixers(self, hidden_states, position_ids=None, position_embeddings=None, inference_params=None, **kwargs):
         hidden_states = self.input_layernorm(hidden_states)
 
         # Apply Mixer1
@@ -260,6 +296,7 @@ class DoubleBlockHymba(Block):
             hidden_states,
             position_ids=position_ids,
             position_embeddings=position_embeddings,
+            inference_params=inference_params,
             **kwargs,
         )
         if isinstance(ssm_outputs, Tensor):
@@ -272,6 +309,7 @@ class DoubleBlockHymba(Block):
                 hidden_states,
                 position_ids=position_ids,
                 position_embeddings=position_embeddings,
+                inference_params=inference_params,
                 **kwargs,
             )
             att_hidden_state = self.att_output_layernorm(att_output["hidden_states"])
@@ -291,13 +329,14 @@ class DoubleBlockHymba(Block):
 ############################################################################
 ############################################################################
 class DoubleRMSNorm(nn.Module):
-    def __init__(self, hidden_size, eps=1e-6):
+    def __init__(self, hidden_size, eps=1e-6, factory_kwargs=None):
         """
         RMSNorm is equivalent to T5LayerNorm
         """
         super().__init__()
-        self.ssm_weight = nn.Parameter(torch.ones(hidden_size))
-        self.attn_weight = nn.Parameter(torch.ones(hidden_size))
+        factory_kwargs = factory_kwargs or {}
+        self.ssm_weight = nn.Parameter(torch.ones(hidden_size, **factory_kwargs))
+        self.attn_weight = nn.Parameter(torch.ones(hidden_size, **factory_kwargs))
         self.variance_epsilon = eps
 
     def forward(self, hidden_states):
@@ -312,11 +351,19 @@ class DoubleBlockMerger(Block):
     def __init__(self, d_model, config, factory_kwargs, layer_idx, **kwargs):
         super().__init__(d_model, config, factory_kwargs, layer_idx, **kwargs)
         RMSNorm = LlamaRMSNorm if config.attn_layer.name == "LlamaAttention" else Qwen2RMSNorm
-        self.input_layernorm = DoubleRMSNorm(hidden_size=self.d_model, eps=1e-5)
+        self.input_layernorm = DoubleRMSNorm(
+            hidden_size=self.d_model,
+            eps=1e-5,
+            factory_kwargs=factory_kwargs,
+        )
         self.output_layernorm = RMSNorm(hidden_size=self.d_model, eps=1e-5)
+        self.output_layernorm = _to_factory_dtype_device(
+            self.output_layernorm, factory_kwargs
+        )
         self.out_proj = nn.Linear(self.d_model, self.d_model, bias=True)
+        self.out_proj = _to_factory_dtype_device(self.out_proj, factory_kwargs)
 
-    def apply_mixers(self, hidden_states, position_ids=None, position_embeddings=None, **kwargs):
+    def apply_mixers(self, hidden_states, position_ids=None, position_embeddings=None, inference_params=None, **kwargs):
         ssm_hidden_states, att_hidden_states = self.input_layernorm(hidden_states)
 
         # Apply Mixer1
@@ -324,6 +371,7 @@ class DoubleBlockMerger(Block):
             ssm_hidden_states,
             position_ids=position_ids,
             position_embeddings=position_embeddings,
+            inference_params=inference_params,
             **kwargs,
         )
         if isinstance(ssm_outputs, Tensor):
@@ -337,6 +385,7 @@ class DoubleBlockMerger(Block):
                 att_hidden_states,
                 position_ids=position_ids,
                 position_embeddings=position_embeddings,
+                inference_params=inference_params,
                 **kwargs,
             )
             assert ssm_outputs["hidden_states"].shape == att_output["hidden_states"].shape

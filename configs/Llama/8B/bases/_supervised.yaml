@@ -6,6 +6,7 @@ LOAD:
 - ./configs/management.yaml
 
 DistillConfig:
+  name: Llama-8B-supervised-template
   type: supervised
   teacher_model: ${TeacherConfig.dir}
 

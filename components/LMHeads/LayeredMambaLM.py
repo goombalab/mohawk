@@ -13,6 +13,10 @@ from huggingface_hub import PyTorchModelHubMixin
 from generation.generation_mixin import GenerationMixin
 
 from components.registry import Registry
+from components._repo_path import ensure_repo_root_on_path
+
+ensure_repo_root_on_path()
+
 from utils.config import Config
 
 
@@ -113,6 +117,11 @@ class LMHeadModel(
         "position_ids" is just to be compatible with Transformer generation. We don't use it.
         num_last_tokens: if > 0, only return the logits for the last n tokens
         """
+        if "output_hidden_states" in kwargs:
+            return_hidden_states = kwargs.pop("output_hidden_states")
+        if "output_attentions" in kwargs:
+            return_mixer_matrix = kwargs.pop("output_attentions")
+
         outputs = self.backbone(
             input_ids=input_ids,
             inputs_embeds=inputs_embeds,

@@ -6,6 +6,17 @@ from components.registry import Registry
 from external_models.modeling_phi import PhiMLP
 
 
+def _to_factory_dtype_device(module, factory_kwargs):
+    move_kwargs = {k: v for k, v in factory_kwargs.items() if v is not None}
+    if not move_kwargs:
+        return module
+    tensors = list(module.parameters(recurse=True)) + list(module.buffers(recurse=True))
+    if any(tensor.device.type == "meta" for tensor in tensors):
+        dtype = move_kwargs.get("dtype")
+        return module.to(dtype=dtype) if dtype is not None else module
+    return module.to(**move_kwargs)
+
+
 class Block(nn.Module):
     def __init__(self, d_model, config, factory_kwargs, layer_idx, **kwargs):
         """
@@ -37,14 +48,15 @@ class Block(nn.Module):
 
 
         # Other components
-        self.input_layernorm = nn.LayerNorm(self.d_model, eps=1e-5).to(**factory_kwargs)
+        self.input_layernorm = nn.LayerNorm(self.d_model, eps=1e-5, **factory_kwargs)
         self.mlp = PhiMLP(
             PhiConfig(
                 hidden_size=self.d_model,
                 intermediate_size=self.d_model * 4,
                 hidden_act="gelu_new",
             )
-        ).to(**factory_kwargs)
+        )
+        self.mlp = _to_factory_dtype_device(self.mlp, factory_kwargs)
         self.resid_dropout = nn.Dropout(config.input.resid_dropout)
 
         return

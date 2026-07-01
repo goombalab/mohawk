@@ -482,8 +482,8 @@ class PhiFlashAttention2(PhiAttention):
 
         attn_dropout = self.attention_dropout if self.training else 0.0
 
-        # In PEFT, usually we cast the layer norms in float32 for training stability reasons
-        # therefore the input hidden states gets silently casted in float32. Hence, we need
+        # Some training setups cast layer norms to float32 for stability, which can
+        # silently cast the input hidden states to float32. Hence, we need to
         # cast them back in the correct dtype just to be sure everything works as expected.
         # This might slowdown training & inference so it is recommended to not cast the LayerNorms
         # in fp32.

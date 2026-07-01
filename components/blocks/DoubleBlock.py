@@ -12,18 +12,8 @@ from transformers.models.qwen2.modeling_qwen2 import (
     Qwen2RMSNorm,
 )
 import torch
+from components._factory import apply_module_factory_kwargs
 from components.registry import Registry
-
-
-def _to_factory_dtype_device(module, factory_kwargs):
-    move_kwargs = {k: v for k, v in factory_kwargs.items() if v is not None}
-    if not move_kwargs:
-        return module
-    tensors = list(module.parameters(recurse=True)) + list(module.buffers(recurse=True))
-    if any(tensor.device.type == "meta" for tensor in tensors):
-        dtype = move_kwargs.get("dtype")
-        return module.to(dtype=dtype) if dtype is not None else module
-    return module.to(**move_kwargs)
 
 
 class Block(nn.Module):
@@ -94,13 +84,13 @@ class Block(nn.Module):
                 hidden_act=config.input.mlp_act_fn,
             )
         )
-        self.input_layernorm = _to_factory_dtype_device(
+        self.input_layernorm = apply_module_factory_kwargs(
             self.input_layernorm, factory_kwargs
         )
-        self.post_attention_layernorm = _to_factory_dtype_device(
+        self.post_attention_layernorm = apply_module_factory_kwargs(
             self.post_attention_layernorm, factory_kwargs
         )
-        self.mlp = _to_factory_dtype_device(self.mlp, factory_kwargs)
+        self.mlp = apply_module_factory_kwargs(self.mlp, factory_kwargs)
 
     def allocate_inference_cache(self, batch_size, max_seqlen, dtype=None, **kwargs):
         ssm_cache = self.mixer1.allocate_inference_cache(
@@ -182,7 +172,7 @@ class Adapter(nn.Module):
         self.d_model = d_model
         self.config = config
         self.out_proj = nn.Linear(self.d_model, self.d_model, bias=True)
-        self.out_proj = _to_factory_dtype_device(self.out_proj, factory_kwargs)
+        self.out_proj = apply_module_factory_kwargs(self.out_proj, factory_kwargs)
         self.norm = Normalize(eps=1e-5)
 
     def forward(self, att_hidden_state, ssm_hidden_state, hidden_states):
@@ -277,16 +267,16 @@ class DoubleBlockHymba(Block):
         RMSNorm = LlamaRMSNorm if config.attn_layer.name == "LlamaAttention" else Qwen2RMSNorm
         self.ssm_output_layernorm = RMSNorm(hidden_size=self.d_model, eps=1e-5)
         self.att_output_layernorm = RMSNorm(hidden_size=self.d_model, eps=1e-5)
-        self.ssm_output_layernorm = _to_factory_dtype_device(
+        self.ssm_output_layernorm = apply_module_factory_kwargs(
             self.ssm_output_layernorm, factory_kwargs
         )
-        self.att_output_layernorm = _to_factory_dtype_device(
+        self.att_output_layernorm = apply_module_factory_kwargs(
             self.att_output_layernorm, factory_kwargs
         )
         self.ssm_gate = nn.Parameter(torch.zeros(d_model, **factory_kwargs))
         self.att_gate = nn.Parameter(torch.zeros(d_model, **factory_kwargs))
         self.out_proj = nn.Linear(self.d_model, self.d_model, bias=True)
-        self.out_proj = _to_factory_dtype_device(self.out_proj, factory_kwargs)
+        self.out_proj = apply_module_factory_kwargs(self.out_proj, factory_kwargs)
 
     def apply_mixers(self, hidden_states, position_ids=None, position_embeddings=None, inference_params=None, **kwargs):
         hidden_states = self.input_layernorm(hidden_states)
@@ -357,11 +347,11 @@ class DoubleBlockMerger(Block):
             factory_kwargs=factory_kwargs,
         )
         self.output_layernorm = RMSNorm(hidden_size=self.d_model, eps=1e-5)
-        self.output_layernorm = _to_factory_dtype_device(
+        self.output_layernorm = apply_module_factory_kwargs(
             self.output_layernorm, factory_kwargs
         )
         self.out_proj = nn.Linear(self.d_model, self.d_model, bias=True)
-        self.out_proj = _to_factory_dtype_device(self.out_proj, factory_kwargs)
+        self.out_proj = apply_module_factory_kwargs(self.out_proj, factory_kwargs)
 
     def apply_mixers(self, hidden_states, position_ids=None, position_embeddings=None, inference_params=None, **kwargs):
         ssm_hidden_states, att_hidden_states = self.input_layernorm(hidden_states)

@@ -2,19 +2,9 @@ import torch.nn as nn
 from torch import Tensor
 from transformers.models.phi.configuration_phi import PhiConfig
 
+from components._factory import apply_module_factory_kwargs
 from components.registry import Registry
 from external_models.modeling_phi import PhiMLP
-
-
-def _to_factory_dtype_device(module, factory_kwargs):
-    move_kwargs = {k: v for k, v in factory_kwargs.items() if v is not None}
-    if not move_kwargs:
-        return module
-    tensors = list(module.parameters(recurse=True)) + list(module.buffers(recurse=True))
-    if any(tensor.device.type == "meta" for tensor in tensors):
-        dtype = move_kwargs.get("dtype")
-        return module.to(dtype=dtype) if dtype is not None else module
-    return module.to(**move_kwargs)
 
 
 class Block(nn.Module):
@@ -56,7 +46,7 @@ class Block(nn.Module):
                 hidden_act="gelu_new",
             )
         )
-        self.mlp = _to_factory_dtype_device(self.mlp, factory_kwargs)
+        self.mlp = apply_module_factory_kwargs(self.mlp, factory_kwargs)
         self.resid_dropout = nn.Dropout(config.input.resid_dropout)
 
         return

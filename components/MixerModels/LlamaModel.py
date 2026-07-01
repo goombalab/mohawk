@@ -2,23 +2,13 @@ import torch
 import torch.nn as nn
 
 from external_models.modeling_llama import LlamaRMSNorm, LlamaRotaryEmbedding, LlamaConfig
+from components._factory import apply_module_factory_kwargs
 from components.registry import Registry
 from components._repo_path import ensure_repo_root_on_path
 
 ensure_repo_root_on_path()
 
 from utils.config import Config
-
-
-def _to_factory_dtype_device(module, factory_kwargs):
-    move_kwargs = {k: v for k, v in factory_kwargs.items() if v is not None}
-    if not move_kwargs:
-        return module
-    tensors = list(module.parameters(recurse=True)) + list(module.buffers(recurse=True))
-    if any(tensor.device.type == "meta" for tensor in tensors):
-        dtype = move_kwargs.get("dtype")
-        return module.to(dtype=dtype) if dtype is not None else module
-    return module.to(**move_kwargs)
 
 
 class MixerModel(nn.Module):
@@ -66,7 +56,7 @@ class MixerModel(nn.Module):
         # Final layer norm
         norm_epsilon = self.config.input.norm_epsilon
         self.final_layernorm = LlamaRMSNorm(hidden_size=d_model, eps=norm_epsilon)
-        self.final_layernorm = _to_factory_dtype_device(
+        self.final_layernorm = apply_module_factory_kwargs(
             self.final_layernorm, factory_kwargs
         )
 

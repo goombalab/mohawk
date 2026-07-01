@@ -4,23 +4,12 @@ from typing import Optional
 import torch
 import torch.nn as nn
 from torch import Tensor
+from components._factory import apply_module_factory_kwargs
 from components.registry import Registry
 from transformers.models.falcon_mamba.modeling_falcon_mamba import (
     FalconMambaRMSNorm,
     FalconMambaConfig,
 )
-
-
-def _to_factory_dtype_device(module, factory_kwargs):
-    move_kwargs = {k: v for k, v in factory_kwargs.items() if v is not None}
-    if not move_kwargs:
-        return module
-    tensors = list(module.parameters(recurse=True)) + list(module.buffers(recurse=True))
-    if any(tensor.device.type == "meta" for tensor in tensors):
-        dtype = move_kwargs.get("dtype")
-        return module.to(dtype=dtype) if dtype is not None else module
-    return module.to(**move_kwargs)
-
 
 class Block(nn.Module):
     def __init__(
@@ -41,7 +30,7 @@ class Block(nn.Module):
         self.config = config
         self.layer_idx = layer_idx
         self.input_layernorm = FalconMambaRMSNorm(hidden_size=self.d_model, eps=1e-5)
-        self.input_layernorm = _to_factory_dtype_device(
+        self.input_layernorm = apply_module_factory_kwargs(
             self.input_layernorm, factory_kwargs
         )
 
@@ -54,7 +43,7 @@ class Block(nn.Module):
             config=falcon_mamba_config,
             layer_idx=layer_idx,
         )
-        self.mixer = _to_factory_dtype_device(self.mixer, factory_kwargs)
+        self.mixer = apply_module_factory_kwargs(self.mixer, factory_kwargs)
         
 
     def forward(

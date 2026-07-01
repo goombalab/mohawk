@@ -1,18 +1,8 @@
 from torch import nn
 from transformers.modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 
+from components._factory import apply_module_factory_kwargs
 from external_models.modeling_phi import PHI_ATTENTION_CLASSES, PhiConfig
-
-
-def _to_factory_dtype_device(module, factory_kwargs):
-    move_kwargs = {k: v for k, v in factory_kwargs.items() if v is not None}
-    if not move_kwargs:
-        return module
-    tensors = list(module.parameters(recurse=True)) + list(module.buffers(recurse=True))
-    if any(tensor.device.type == "meta" for tensor in tensors):
-        dtype = move_kwargs.get("dtype")
-        return module.to(dtype=dtype) if dtype is not None else module
-    return module.to(**move_kwargs)
 
 
 class Mixer(nn.Module):
@@ -35,7 +25,7 @@ class Mixer(nn.Module):
         self.self_attn = PHI_ATTENTION_CLASSES[type](
             PhiConfig(**self.model_cfg), layer_idx
         )
-        self.self_attn = _to_factory_dtype_device(self.self_attn, factory_kwargs)
+        self.self_attn = apply_module_factory_kwargs(self.self_attn, factory_kwargs)
         self._attention_mask = None
 
     def forward(

@@ -9,7 +9,7 @@ Set up a local environment and run the dependency-light CPU baseline:
 ```bash
 git clone https://github.com/goombalab/mohawk.git
 cd mohawk
-python -m pip install -r requirements-cpu.txt
+python -m pip install pytest PyYAML
 python3 -m compileall -q .
 pytest -q
 ```

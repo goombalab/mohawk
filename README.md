@@ -52,7 +52,7 @@ For the row-scoped CPU-safe baseline validated by this audit:
 ```bash
 git clone https://github.com/goombalab/mohawk.git
 cd mohawk
-python -m pip install -r requirements-cpu.txt
+python -m pip install pytest PyYAML
 ```
 
 For the default Python runtime and evaluation stack validated by this audit:
@@ -174,9 +174,9 @@ default to `WANDB_MODE=disabled`; set `WANDB_MODE=online` and provide
 
 ### Validate a Fresh Checkout
 
-After installing the lightweight dependencies above (`requirements-cpu.txt`),
-these commands are the CPU-safe validation path and do not require downloaded
-model weights or datasets:
+After installing the lightweight dependencies above, these commands are the
+CPU-safe validation path and do not require downloaded model weights or
+datasets:
 
 ```bash
 python run.py --help

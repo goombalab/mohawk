@@ -140,10 +140,58 @@ run.py               Training entry point
 
 ## Publications
 
-- [Retrieval-Aware Distillation for Transformer-SSM Hybrids](https://arxiv.org/abs/2602.11374)
-- [Llamba: Scaling Distilled Recurrent Models for Efficient Language Processing](https://arxiv.org/abs/2502.14458)
-- [Thinking Slow, Fast: Scaling Inference Compute with Distilled Reasoners](https://arxiv.org/abs/2502.20339)
-- [Transformers to SSMs: Distilling Quadratic Knowledge to Subquadratic Models](https://arxiv.org/abs/2408.10189)
+### Retrieval-Aware Distillation for Transformer-SSM Hybrids
+
+```bibtex
+@misc{bick2026retrieval,
+      title={Retrieval-Aware Distillation for Transformer-SSM Hybrids},
+      author={Aviv Bick and Eric P. Xing and Albert Gu},
+      year={2026},
+      eprint={2602.11374},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2602.11374},
+}
+```
+
+### Llamba: Scaling Distilled Recurrent Models for Efficient Language Processing
+
+```bibtex
+@article{bick2025llamba,
+  title={Llamba: Scaling distilled recurrent models for efficient language processing},
+  author={Bick, Aviv and Katsch, Tobias and Sohoni, Nimit and Desai, Arjun and Gu, Albert},
+  journal={arXiv preprint arXiv:2502.14458},
+  year={2025}
+}
+```
+
+### Thinking Slow, Fast: Scaling Inference Compute with Distilled Reasoners
+
+```bibtex
+@misc{paliotta2025thinking,
+      title={Thinking Slow, Fast: Scaling Inference Compute with Distilled Reasoners},
+      author={Daniele Paliotta and Junxiong Wang and Matteo Pagliardini and Kevin Y. Li and Aviv Bick and J. Zico Kolter and Albert Gu and François Fleuret and Tri Dao},
+      year={2025},
+      eprint={2502.20339},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2502.20339},
+}
+```
+
+### Transformers to SSMs: Distilling Quadratic Knowledge to Subquadratic Models (Mohawk)
+
+```bibtex
+@misc{mohawk,
+      title={Transformers to SSMs: Distilling Quadratic Knowledge to Subquadratic Models},
+      author={Aviv Bick and Kevin Y. Li and Eric P. Xing and J. Zico Kolter and Albert Gu},
+      year={2025},
+      eprint={2408.10189},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2408.10189},
+}
+```
 
 ## Citation
 

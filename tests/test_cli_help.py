@@ -23,6 +23,18 @@ README_FRESH_CHECKOUT_HELP_COMMANDS = {
 }
 
 
+def test_readme_preserves_publication_citations():
+    readme = (ROOT / "README.md").read_text()
+
+    for citation_key in [
+        "@misc{bick2026retrieval,",
+        "@article{bick2025llamba,",
+        "@misc{paliotta2025thinking,",
+        "@misc{mohawk,",
+    ]:
+        assert citation_key in readme
+
+
 def test_public_cli_help_does_not_import_heavy_runtime(command):
     if tuple(command) in README_FRESH_CHECKOUT_HELP_COMMANDS:
         readme = (ROOT / "README.md").read_text()

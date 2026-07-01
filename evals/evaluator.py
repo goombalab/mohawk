@@ -119,12 +119,13 @@ class Evaluator:
 
 
             # RECORD BEST
-            self.bests[_idx_] = self.bests[_idx_] or results
-            is_best = eval_obj.is_better(
-                current_best=self.bests[_idx_], 
-                new=results
+            current_best = self.bests[_idx_]
+            is_best = current_best is None or eval_obj.is_better(
+                current_best=current_best,
+                new=results,
                 )
-            self.bests[_idx_] = results if is_best else self.bests[_idx_]
+            if is_best:
+                self.bests[_idx_] = results
 
             # WANDB & LOG
             metrics.update(self.write_metrics(results))
@@ -161,9 +162,6 @@ class Evaluator:
         Returns:
             saved_dir: directory where checkpoint was saved
         """
-        if not is_master:
-            return None
-        
         # Get the base save directory
         base_save_dir = self.student_wrapper.config.ManagementConfig.paths.save_dir
         
@@ -177,19 +175,30 @@ class Evaluator:
         
         # Temporarily modify save_dir to save to the subdirectory
         original_save_dir = self.student_wrapper.config.ManagementConfig.paths.save_dir
-        self.student_wrapper.config.ManagementConfig.paths.save_dir = save_dir
-        
-        # Save weights
-        saved_dir = self.student_wrapper.save_weights()
-        
-        # Restore original save_dir
-        self.student_wrapper.config.ManagementConfig.paths.save_dir = original_save_dir
+        try:
+            self.student_wrapper.config.ManagementConfig.paths.save_dir = save_dir
+            saved_dir = self.student_wrapper.save_weights()
+        finally:
+            self.student_wrapper.config.ManagementConfig.paths.save_dir = original_save_dir
+
+        if not is_master:
+            return None
+        if saved_dir is None:
+            saved_dir = save_dir
         
         # Save dataloader state
-        torch.save(
-            self.dataloader.state_dict(),
-            f"{saved_dir}/dataloader_state_dict.pth"
-        )
+        try:
+            dataloader_state = self.dataloader.state_dict()
+        except NotImplementedError:
+            logger.warning(
+                "[SAVE] Dataloader state is not implemented for this loader; "
+                f"skipping dataloader_state_dict.pth for {checkpoint_type}_{eval_obj.name}."
+            )
+        else:
+            torch.save(
+                dataloader_state,
+                f"{saved_dir}/dataloader_state_dict.pth"
+            )
         
         # Save txt with results
         txt_path = f"{saved_dir}/{checkpoint_type}_{eval_obj.name}.txt"

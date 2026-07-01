@@ -1,5 +1,49 @@
 import os
 import argparse
+import sys
+from pathlib import Path
+
+
+def build_arg_parser():
+    parser = argparse.ArgumentParser(
+        description="Transfer selected teacher attention heads into a hybrid student model."
+    )
+    parser.add_argument(
+        "--config",
+        default="./configs/Qwen2/1.5B/hybrid/architecture_5.yaml",
+        help="Path to the hybrid model config.",
+    )
+    parser.add_argument(
+        "--heads",
+        default=None,
+        help=(
+            "Comma-separated layer:head pairs to transfer, for example '0:0,1:2'. "
+            "When omitted, the built-in production teacher map is used."
+        ),
+    )
+    parser.add_argument(
+        "--device",
+        default=None,
+        choices=["cpu", "cuda"],
+        help="Device for the smoke/probe forward. Defaults to CUDA when available, otherwise CPU.",
+    )
+    parser.add_argument(
+        "--allow-unexpected-student-load",
+        action="store_true",
+        help="Allow unexpected teacher keys while preloading the student from teacher weights.",
+    )
+    return parser
+
+
+if any(arg in {"-h", "--help"} for arg in sys.argv[1:]):
+    build_arg_parser().print_help()
+    raise SystemExit(0)
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 import torch
 
 from utils.logging import init_logging
@@ -32,13 +76,7 @@ HEADS_BY_TEACHER = {
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Transfer selected teacher attention heads into a hybrid student model.")
-    parser.add_argument(
-        "--config",
-        default="./configs/Qwen2/1.5B/hybrid/architecture_5.yaml",
-        help="Path to the hybrid model config.",
-    )
-    return parser.parse_args()
+    return build_arg_parser().parse_args()
 
 
 def get_heads_for_teacher(teacher_dir):
@@ -48,6 +86,43 @@ def get_heads_for_teacher(teacher_dir):
     return HEADS_BY_TEACHER[teacher_dir]
 
 
+def parse_heads(heads_arg):
+    if heads_arg is None:
+        return None
+    heads = []
+    for item in heads_arg.split(","):
+        layer_idx, head_idx = item.split(":", 1)
+        heads.append((int(layer_idx), int(head_idx)))
+    return heads
+
+
+def apply_config_env_vars(cfg):
+    env_vars = getattr(getattr(cfg, "ManagementConfig", None), "env_vars", {})
+    for key, value in getattr(env_vars, "items", lambda: [])():
+        if value is not None:
+            os.environ[str(key)] = str(value)
+
+
+def resolve_device(device_arg):
+    if device_arg is not None:
+        if device_arg == "cpu":
+            os.environ["CUDA_VISIBLE_DEVICES"] = ""
+            return torch.device("cpu")
+        if device_arg == "cuda" and not torch.cuda.is_available():
+            raise RuntimeError("Requested --device cuda, but CUDA is unavailable.")
+        return torch.device(device_arg)
+    return torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+def seed_from_config(cfg):
+    seed = getattr(getattr(cfg, "TrainConfig", None), "seed", None)
+    if seed is None:
+        return
+    torch.manual_seed(int(seed))
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(int(seed))
+
+
 def main():
     args = parse_args()
 
@@ -55,12 +130,15 @@ def main():
         config_path=args.config,
         CONSTANTS={"slurm_job_id": 0},
     )
+    apply_config_env_vars(cfg)
+    device = resolve_device(args.device)
+    seed_from_config(cfg)
 
     cfg.LoadConfig = Config.from_dict({
         "model": [
             {
                 "allow_missing_keys": True,
-                "allow_unexpected_keys": False,
+                "allow_unexpected_keys": args.allow_unexpected_student_load,
                 "path": cfg.TeacherConfig.dir,
                 "rename": {
                     ".norm.": ".final_layernorm.",
@@ -76,7 +154,9 @@ def main():
         ]
     })
 
-    heads = get_heads_for_teacher(cfg.TeacherConfig.dir)
+    heads = parse_heads(args.heads)
+    if heads is None:
+        heads = get_heads_for_teacher(cfg.TeacherConfig.dir)
 
     with init_logging(cfg, wandb_id="0"):
         student_wrapper = eager_init(
@@ -86,7 +166,7 @@ def main():
             cfg=cfg,
             mode="inference",
         )
-        student_wrapper(input_ids=torch.zeros((1, 1), dtype=torch.int64).cuda())
+        student_wrapper(input_ids=torch.zeros((1, 1), dtype=torch.int64, device=device))
 
         teacher_wrapper = eager_init(
             details_cfg=cfg.TeacherConfig,

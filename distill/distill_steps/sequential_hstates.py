@@ -4,7 +4,14 @@ import torch
 
 from training_wrapper import BaseTrainingWrapper
 from utils.config import Config
-from utils.distributed import local_rank
+from utils.distributed import get_device
+
+
+def _get_hidden_states(outputs):
+    hidden_states = getattr(outputs, "hidden_states", None)
+    if hidden_states is None:
+        hidden_states = getattr(outputs, "all_hidden_states", None)
+    return hidden_states
 
 
 def distill_step(
@@ -15,25 +22,30 @@ def distill_step(
     hstates_gap: int = 1,
     **kwargs,
 ) -> List[float]:
-    input_ids = batch["input_ids"].to(local_rank)
+    device = get_device()
+    input_ids = batch["input_ids"].to(device)
     
     num_layers = len(student_wrapper.module.backbone.layers)
     assert num_layers % hstates_gap == 0
 
     scores = []
 
-    teacher_outputs = teacher_wrapper(
-        input_ids=input_ids,
-        output_hidden_states=True,
-        output_attentions=False,
-        use_cache=False,
-    )
+    with torch.no_grad():
+        teacher_outputs = teacher_wrapper(
+            input_ids=input_ids,
+            output_hidden_states=True,
+            output_attentions=False,
+            use_cache=False,
+        )
+    teacher_hidden_states = _get_hidden_states(teacher_outputs)
+    assert teacher_hidden_states is not None, "Teacher model did not return hidden states."
 
+    total_loss = None
     layer_idx = 0
     while layer_idx < num_layers:
         
         # Get student hidden states
-        hidden_states = teacher_outputs.hidden_states[layer_idx]
+        hidden_states = teacher_hidden_states[layer_idx]
 
         # Forward pass
         student_wrapper.module.forward_fn = "_layer_forward"
@@ -48,7 +60,7 @@ def distill_step(
         student_wrapper.module.forward_fn = "_forward"
 
         # Get teacher hidden states
-        output = teacher_outputs.hidden_states[layer_idx]
+        output = teacher_hidden_states[layer_idx]
         assert hidden_states.size() == output.size()
 
         # Calculate hstates distance:
@@ -58,7 +70,9 @@ def distill_step(
         # Free memory
         # hidden_states = input = output = None
 
-        # Backward pass
-        student_wrapper.backward(hstates_distance)
+        total_loss = hstates_distance if total_loss is None else total_loss + hstates_distance
+
+    if total_loss is not None:
+        student_wrapper.backward(total_loss)
 
     return scores

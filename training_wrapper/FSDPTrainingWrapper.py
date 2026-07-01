@@ -69,6 +69,12 @@ class FSDPTrainingWrapper(BaseTrainingWrapper):
         return self._model.module
     
     def __call__(self, *args, **kwargs):
+        # See CentralizedTrainingWrapper.__call__: no_grad in inference mode is
+        # belt-and-braces against accidentally building an autograd graph
+        # through a teacher when an upstream tensor has requires_grad=True.
+        if self.mode == "inference":
+            with torch.no_grad():
+                return self._model(*args, **kwargs)
         return self._model(*args, **kwargs)
 
     def generate(self, *args, **kwargs):
@@ -78,6 +84,14 @@ class FSDPTrainingWrapper(BaseTrainingWrapper):
         assert hasattr(self, "_model"), "Model not initialized."
         assert isinstance(self._model, FSDP), "Model must be wrapped with FSDP."
         return self._model.generate(*args, **kwargs)
+
+    def no_sync(self):
+        if isinstance(self._model, FSDP):
+            if not getattr(self, "_logged_no_sync", False):
+                logger.info("[TRAINING_WRAPPER] Using FSDP no_sync for gradient accumulation.")
+                self._logged_no_sync = True
+            return self._model.no_sync()
+        return super().no_sync()
 
     def backward(self, loss):
         """
@@ -173,19 +187,29 @@ class FSDPTrainingWrapper(BaseTrainingWrapper):
                 # cast_forward_inputs=True,
             )
 
-        # Wrap for good sharding:
-        # blocks_cls = set([layer.__class__ for layer in self._model.backbone.layers])
-        # assert len(blocks_cls) == 1, "All layers must be of the same class for now."
-        layers = (
-            self._model.backbone.layers
-            if hasattr(self._model, "backbone")
-            else self._model.model.layers
-        )
-        block_cls = layers[0].__class__
-        kwargs["auto_wrap_policy"] = partial(
-            fsdp_module.wrap.transformer_auto_wrap_policy,
-            transformer_layer_cls={block_cls},
-        )
+        # Wrap for good sharding. Probe common transformer layouts; HF GPT-2
+        # exposes its blocks at .transformer.h, our LayeredMambaLM at
+        # .backbone.layers, Llama-style models at .model.layers.
+        if hasattr(self._model, "backbone") and hasattr(self._model.backbone, "layers"):
+            layers = self._model.backbone.layers
+        elif hasattr(self._model, "model") and hasattr(self._model.model, "layers"):
+            layers = self._model.model.layers
+        elif hasattr(self._model, "transformer") and hasattr(self._model.transformer, "h"):
+            layers = self._model.transformer.h
+        else:
+            layers = None
+
+        block_cls = layers[0].__class__ if layers else None
+        if block_cls is not None:
+            kwargs["auto_wrap_policy"] = partial(
+                fsdp_module.wrap.transformer_auto_wrap_policy,
+                transformer_layer_cls={block_cls},
+            )
+        else:
+            logger.warning(
+                "[TRAINING_WRAPPER] Could not infer transformer block class; "
+                "FSDP will wrap the whole module."
+            )
 
         # USE ORIGINAL PARAMS?
         # Cannot flatten params if some are not trainable and some are
@@ -224,7 +248,7 @@ class FSDPTrainingWrapper(BaseTrainingWrapper):
         self._model = FSDP(module=self._model, **kwargs)
 
         # ACTIVATION CHECKPOINTING
-        if activation_checkpointing:
+        if activation_checkpointing and block_cls is not None:
             non_reentrant_wrapper = partial(
                 checkpoint_wrapper,
                 offload_to_cpu=False,
@@ -234,6 +258,11 @@ class FSDPTrainingWrapper(BaseTrainingWrapper):
                 self._model,
                 checkpoint_wrapper_fn=non_reentrant_wrapper,
                 check_fn=lambda submodule: isinstance(submodule, block_cls),
+            )
+        elif activation_checkpointing:
+            logger.warning(
+                "[TRAINING_WRAPPER] activation_checkpointing requested but no "
+                "block class was inferred; skipping."
             )
 
         # Support FSDP generation:
@@ -262,15 +291,24 @@ class FSDPTrainingWrapper(BaseTrainingWrapper):
         self.optimizer = setup_optimizer(self._model, self.config.OptimizerConfig)
         self.scheduler = setup_scheduler(self.optimizer, self.config.OptimizerConfig, total_grad_steps)
 
-
-        if hasattr(self.config.LoadConfig, "optimizer"):
-            path = self.config.LoadConfig.optimizer.path
+        load_cfg = getattr(self.config, "LoadConfig", None)
+        if load_cfg is None:
+            return
+        if hasattr(load_cfg, "optimizer"):
+            path = load_cfg.optimizer.path
             full_osd = torch.load(f=os.path.join(path, "optimizer.pth"), map_location="cpu") if local_rank == 0 else None
             sharded_osd = FSDP.scatter_full_optim_state_dict(full_osd, self._model)
             self.optimizer.load_state_dict(sharded_osd)
-        if hasattr(self.config.LoadConfig, "scheduler"):
-            scheduler_state = load_scheduler(self.config.LoadConfig.scheduler)
+        if hasattr(load_cfg, "scheduler"):
+            scheduler_state = load_scheduler(load_cfg.scheduler)
+            configured_num_steps = self.scheduler.num_steps
             self.scheduler.load_state_dict(scheduler_state)
+            if self.scheduler._step_count > configured_num_steps:
+                raise ValueError(
+                    f"Loaded scheduler step {self.scheduler._step_count} exceeds "
+                    f"configured total steps {configured_num_steps}."
+                )
+            self.scheduler.num_steps = configured_num_steps
 
         # FSDP.scatter_full_optim_state_dict(self.optimizer, self._model)
 

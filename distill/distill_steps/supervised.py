@@ -4,7 +4,7 @@ import torch
 
 from training_wrapper import BaseTrainingWrapper
 from utils.config import Config
-from utils.distributed import local_rank
+from utils.distributed import get_device
 
 
 @torch.jit.script
@@ -41,21 +41,23 @@ def distill_step(
             If  T > 1 , the model becomes more uncertain (softer logits).
             If  T < 1 , the model becomes more confident (sharper logits).
     """
-    input_ids = batch["input_ids"].to(local_rank)
+    device = get_device()
+    input_ids = batch["input_ids"].to(device)
     vocab_size = cfg.ComponentsConfig.input.vocab_size
     if "position_ids" in batch:
-        position_ids = batch["position_ids"].to(local_rank)
+        position_ids = batch["position_ids"].to(device)
     else:
         position_ids = None
         
     # Teacher forward pass
-    teacher_logits = teacher_wrapper(
-        input_ids=input_ids,
-        position_ids=position_ids,
-        output_hidden_states=False,
-        output_attentions=False,
-        use_cache=False,
-        ).logits.view(-1, vocab_size)
+    with torch.no_grad():
+        teacher_logits = teacher_wrapper(
+            input_ids=input_ids,
+            position_ids=position_ids,
+            output_hidden_states=False,
+            output_attentions=False,
+            use_cache=False,
+            ).logits.view(-1, vocab_size)
 
     # Student forward pass
     student_wrapper.module.forward_fn = "_forward"

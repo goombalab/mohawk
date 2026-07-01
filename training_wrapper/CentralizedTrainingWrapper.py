@@ -1,8 +1,11 @@
+import contextlib
+import os
+
 import torch
 import torch.distributed as torch_dist
 
-from distill.utils import setup_optimizer, setup_scheduler, setup_gradients
-from utils.distributed import is_master, local_rank
+from distill.utils import load_scheduler, setup_optimizer, setup_scheduler, setup_gradients
+from utils.distributed import get_device, is_master
 from utils.logging import logger
 
 from .BaseTrainingWrapper import BaseTrainingWrapper
@@ -26,6 +29,8 @@ class CentralizedTrainingWrapper(BaseTrainingWrapper):
         self.compile_model = compile_model
         self.model_dtype = model_dtype
         self.mixed_precision = mixed_precision
+        self.device = get_device()
+        logger.info(f"[TRAINING_WRAPPER] Device: {self.device}")
         self.cuda_graph = True
         # 1. Mixed Precision
         self._setup_mixed_precision()
@@ -34,7 +39,7 @@ class CentralizedTrainingWrapper(BaseTrainingWrapper):
         # 3. Setup model gradients
         self._setup_gradients()
         # 4. Move model to device
-        self._model = self._model.to(local_rank)
+        self._model = self._model.to(self.device)
         # 5. Compile model
         self._compile_model()
         # 6. Setup optimizer and scheduler
@@ -52,8 +57,13 @@ class CentralizedTrainingWrapper(BaseTrainingWrapper):
         return self._model
 
     def __call__(self, *args, **kwargs):
-        with torch.amp.autocast(
-            device_type=f"cuda:{local_rank}",
+        # Disable autograd entirely for inference-mode wrappers (i.e. teachers).
+        # _setup_gradients also calls requires_grad_(False), but that only
+        # guarantees teacher params stay frozen; it doesn't prevent the
+        # autograd graph from being built if any input has requires_grad=True.
+        grad_ctx = torch.no_grad() if self.mode == "inference" else contextlib.nullcontext()
+        with grad_ctx, torch.amp.autocast(
+            device_type=self.device.type,
             dtype=torch.bfloat16,
             enabled=self.mixed_precision
         ):
@@ -66,7 +76,7 @@ class CentralizedTrainingWrapper(BaseTrainingWrapper):
         Generate function for the model.
         """
         with torch.amp.autocast(
-            device_type=f"cuda:{local_rank}",
+            device_type=self.device.type,
             dtype=torch.bfloat16,
             enabled=self.mixed_precision
         ):
@@ -163,9 +173,28 @@ class CentralizedTrainingWrapper(BaseTrainingWrapper):
         total_grad_steps = int(self.config.TrainConfig["n_batches"] / self.config.TrainConfig["accumulation_steps"])        
         self.optimizer = setup_optimizer(self._model, opt_config)
         self.scheduler = setup_scheduler(self.optimizer, opt_config, total_grad_steps)
+        load_cfg = getattr(self.config, "LoadConfig", None)
+        if load_cfg is None:
+            return
+        if hasattr(load_cfg, "optimizer"):
+            opt_state = torch.load(
+                os.path.join(load_cfg.optimizer.path, "optimizer.pth"),
+                map_location="cpu",
+            )
+            self.optimizer.load_state_dict(opt_state)
+        if hasattr(load_cfg, "scheduler"):
+            scheduler_state = load_scheduler(load_cfg.scheduler)
+            configured_num_steps = self.scheduler.num_steps
+            self.scheduler.load_state_dict(scheduler_state)
+            if self.scheduler._step_count > configured_num_steps:
+                raise ValueError(
+                    f"Loaded scheduler step {self.scheduler._step_count} exceeds "
+                    f"configured total steps {configured_num_steps}."
+                )
+            self.scheduler.num_steps = configured_num_steps
 
     def _setup_mixed_precision(self):        
-        if self.mixed_precision and self.model_dtype == "bfloat16":
+        if self.mixed_precision and self.model_dtype in {"bfloat16", torch.bfloat16}:
             logger.warning(
                 "Cannot use mixed precision with bfloat16. Setting mixed_precision=False."
             )
@@ -178,7 +207,7 @@ class CentralizedTrainingWrapper(BaseTrainingWrapper):
             assert all([p.dtype == torch.float32 for p in self._model.parameters()]), "Model must be in float32 for mixed precision training."
 
         # Mixed Precision
-        self.scaler = torch.amp.GradScaler('cuda')
+        self.scaler = torch.amp.GradScaler(self.device.type)
 
     def save_weights(self):
         """
@@ -187,8 +216,13 @@ class CentralizedTrainingWrapper(BaseTrainingWrapper):
         if not is_master:
             return
 
+        model_state = {
+            k.replace("_orig_mod.", ""): v
+            for k, v in self._model.state_dict().items()
+        }
+
         return save_weights(
-                model_state=self._model.state_dict(),
+                model_state=model_state,
                 opt_state=self.optimizer.state_dict() if self.optimizer else None,
                 scheduler_state=self.scheduler.state_dict() if self.scheduler else None,
                 config=self.config,

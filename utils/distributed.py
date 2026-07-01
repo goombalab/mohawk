@@ -18,6 +18,9 @@ REQUIRED_ENV_VARS = [
 os.environ["WORLD_SIZE"] = os.environ.get("WORLD_SIZE", "1")
 os.environ["RANK"] = os.environ.get("RANK", "0")
 os.environ["LOCAL_RANK"] = os.environ.get("LOCAL_RANK", "0")
+os.environ["LOCAL_WORLD_SIZE"] = os.environ.get("LOCAL_WORLD_SIZE", "1")
+os.environ["MASTER_ADDR"] = os.environ.get("MASTER_ADDR", "localhost")
+os.environ["MASTER_PORT"] = os.environ.get("MASTER_PORT", "29500")
 world_size = int(os.environ["WORLD_SIZE"])
 global_rank = int(os.environ["RANK"])
 local_rank = int(os.environ["LOCAL_RANK"])
@@ -30,6 +33,13 @@ def details():
         "local_rank": int(os.environ["LOCAL_RANK"]),
         "is_master": int(os.environ["RANK"]) == 0,
     }
+
+
+def get_device():
+    """Return the current process device, falling back to CPU for unit tests."""
+    if torch.cuda.is_available():
+        return torch.device(f"cuda:{local_rank}")
+    return torch.device("cpu")
 
 def use_distributed(*cm_args, **cm_kwargs):
     def decorator(func):
@@ -54,15 +64,18 @@ def init_distributed(backend='nccl', *args, **kwargs):
             # Your distributed code here
     """
     assert not torch.distributed.is_initialized(), "Distributed is already initialized."
-    assert all([env_var in os.environ for env_var in REQUIRED_ENV_VARS]), "Environment variables not set. Have you run `torchrun`?"
-
     # Set environment variables
     os.environ["TOKENIZERS_PARALLELISM"] = "false" # Disable tokenizers parallelism
     os.environ["OMP_NUM_THREADS"] = "8" # Set number of threads for OpenMP
     os.environ["WORLD_SIZE"] = os.environ.get("WORLD_SIZE", "1") # Set world size
     os.environ["RANK"] = os.environ.get("RANK", "0") # Set rank
     os.environ["LOCAL_RANK"] = os.environ.get("LOCAL_RANK", "0") # Set local rank
+    os.environ["LOCAL_WORLD_SIZE"] = os.environ.get("LOCAL_WORLD_SIZE", "1")
+    os.environ["MASTER_ADDR"] = os.environ.get("MASTER_ADDR", "localhost")
+    os.environ["MASTER_PORT"] = os.environ.get("MASTER_PORT", "29500")
     os.environ['CURL_CA_BUNDLE'] = '' # Disable SSL verification for HTTP requests (for Hugging Face models)
+
+    assert all([env_var in os.environ for env_var in REQUIRED_ENV_VARS]), "Distributed environment variables are not set."
 
     if local_rank == 0:
         print(f"[DISTRIBUTED] Information:"
@@ -72,6 +85,19 @@ def init_distributed(backend='nccl', *args, **kwargs):
 
     # Set device (MUST BE DONE BEFORE INITIALIZING DISTRIBUTED)
     _details = details()
+    allow_cpu_training = os.environ.get("MOHAWK_ALLOW_CPU_TRAINING") == "1"
+    if not torch.cuda.is_available():
+        if allow_cpu_training and world_size == 1:
+            print(
+                "[DISTRIBUTED] CUDA is unavailable; continuing on CPU because "
+                "MOHAWK_ALLOW_CPU_TRAINING=1 and WORLD_SIZE=1."
+            )
+            yield
+            return
+        raise RuntimeError(
+            "Mohawk training requires CUDA. Use CLI --help, config tests, and CPU-safe "
+            "unit tests on CPU-only machines; run training/eval smoke tests on NVIDIA GPUs."
+        )
     torch.cuda.set_device(_details["local_rank"] % torch.cuda.device_count())
 
     if world_size == 1:
@@ -83,18 +109,30 @@ def init_distributed(backend='nccl', *args, **kwargs):
         from datetime import timedelta
         kwargs["timeout"] = timedelta(seconds=60*60*4)
 
+    # Pass device_id so PyTorch silences its "no device_id" warning and binds
+    # the process group to this rank's CUDA device explicitly.
+    if "device_id" not in kwargs and torch.cuda.is_available():
+        kwargs["device_id"] = torch.device(f"cuda:{_details['local_rank'] % torch.cuda.device_count()}")
+
+    clean_exit = False
     try:
         dist.init_process_group(backend=backend, *args, **kwargs)
         yield
-    except Exception as e:
+        clean_exit = True
+    except Exception:
         print(30*"=")
-        print(f"[DISTRIBUTED] Error at rank {global_rank}:\n") # {e}")
+        print(f"[DISTRIBUTED] Error at rank {global_rank}:\n")
         import traceback
         print(traceback.format_exc())
         print(30*"=")
+        raise
     finally:
         if torch.distributed.is_initialized():
-            torch.distributed.barrier()
+            # Only barrier on a clean exit. If one rank is tearing down due to
+            # an exception, the other ranks' barrier would hang and mask the
+            # real failure. Destroy the process group unconditionally.
+            if clean_exit:
+                torch.distributed.barrier()
             dist.destroy_process_group()
             if is_master:
                 print("[DISTRIBUTED] Process group destroyed.")

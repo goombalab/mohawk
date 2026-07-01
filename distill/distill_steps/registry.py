@@ -16,6 +16,7 @@ REGISTRY = {
     # Distillation steps
     "supervised": "distill.distill_steps.supervised",
     "hstates": "distill.distill_steps.hstates",
+    "sequential_hstates": "distill.distill_steps.sequential_hstates",
     "matrices": "distill.distill_steps.matrices",
     "supervised_instruct": "distill.distill_steps.supervised_instruct",
     "dpo": "distill.distill_steps.dpo",

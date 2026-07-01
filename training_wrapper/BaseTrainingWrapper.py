@@ -1,5 +1,7 @@
-from utils.logging import logger
+import contextlib
 import signal
+
+from utils.logging import logger
 
 class BaseTrainingWrapper:
     def __init__(
@@ -26,6 +28,9 @@ class BaseTrainingWrapper:
 
     def __call__(self, *args, **kwargs):
         raise NotImplementedError
+
+    def no_sync(self):
+        return contextlib.nullcontext()
 
     def __repr__(self):
         return f"TrainingWrapper(model={self._model}, optimizer={self.optimizer}, scheduler={self.scheduler})"

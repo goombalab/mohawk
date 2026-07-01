@@ -1,9 +1,13 @@
 import os
 
 import torch
-from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
 from utils.logging import logger
 from utils.wsd_scheduler import get_wsd_scheduler
+
+try:
+    from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
+except ModuleNotFoundError:
+    LinearWarmupCosineAnnealingLR = None
 
 
 def setup_scheduler(optimizer, opt_cfg, total_grad_steps):
@@ -42,6 +46,11 @@ def setup_scheduler(optimizer, opt_cfg, total_grad_steps):
     
     # Initialize scheduler
     if scheduler_cfg["name"] == "cosine":
+        if LinearWarmupCosineAnnealingLR is None:
+            raise ImportError(
+                "scheduler.name='cosine' requires the optional 'lightning-bolts' "
+                "package that provides pl_bolts. Install it or use scheduler.name='wsd'/'constant'."
+            )
         scheduler = LinearWarmupCosineAnnealingLR(
             optimizer,
             warmup_epochs=warmup_steps,

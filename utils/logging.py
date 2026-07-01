@@ -24,6 +24,47 @@ class DummyObject:
         """Return False to indicate that the exception was not handled."""
         return False 
 
+
+class BasicFileLogger:
+    def __init__(self, log_path):
+        self.log_path = log_path
+        os.makedirs(os.path.dirname(self.log_path), exist_ok=True)
+
+    def _format(self, message, *args):
+        if args:
+            try:
+                return str(message).format(*args)
+            except Exception:
+                return " ".join([str(message), *[str(arg) for arg in args]])
+        return str(message)
+
+    def _log(self, level, message, *args, **kwargs):
+        text = self._format(message, *args)
+        print(text)
+        with open(self.log_path, "a", encoding="utf-8") as handle:
+            handle.write(f"[{level}] {text}\n")
+
+    def trace(self, message, *args, **kwargs):
+        self._log("TRACE", message, *args, **kwargs)
+
+    def debug(self, message, *args, **kwargs):
+        self._log("DEBUG", message, *args, **kwargs)
+
+    def info(self, message, *args, **kwargs):
+        self._log("INFO", message, *args, **kwargs)
+
+    def success(self, message, *args, **kwargs):
+        self._log("SUCCESS", message, *args, **kwargs)
+
+    def warning(self, message, *args, **kwargs):
+        self._log("WARNING", message, *args, **kwargs)
+
+    def error(self, message, *args, **kwargs):
+        self._log("ERROR", message, *args, **kwargs)
+
+    def critical(self, message, *args, **kwargs):
+        self._log("CRITICAL", message, *args, **kwargs)
+
 class LoggerProxy:
     _instance = None
     _log_levels = {"trace", "debug", "info", "success", "warning", "error", "critical"}
@@ -42,7 +83,8 @@ class LoggerProxy:
             return
         if once:
             self._logged_messages["warning"].add(message)
-        assert _state["loguru"] is not None, "Logger is not initialized."
+        if _state["loguru"] is None:
+            return None
         return _state["loguru"].warning(message, *args, **kwargs)
     
     def info(self, message, *args, once=False, **kwargs):
@@ -50,12 +92,14 @@ class LoggerProxy:
             return
         if once:
             self._logged_messages["info"].add(message)
-        assert _state["loguru"] is not None, "Logger is not initialized."
+        if _state["loguru"] is None:
+            return None
         return _state["loguru"].info(message, *args, **kwargs)
             
     def __getattr__(self, name):
         # Re-fetch the logger every time an attribute (e.g., info, debug) is accessed
-        assert _state["loguru"] is not None, "Logger is not initialized."
+        if _state["loguru"] is None:
+            return lambda *args, **kwargs: None
         return getattr(_state["loguru"], name)  # Return the requested method from the logger
 
 
@@ -84,41 +128,61 @@ def init_wandb(config, wandb_id=None):
     import wandb as _wandb
 
     wandb_cfg = config.ManagementConfig.wandb
+    env_cfg = getattr(config.ManagementConfig, "env_vars", {})
+    wandb_mode = (
+        os.environ.get("WANDB_MODE")
+        or getattr(env_cfg, "WANDB_MODE", None)
+        or wandb_cfg.get("mode", "online")
+    )
     # Get W&B API key from config or environment variable
     wandb_key = wandb_cfg.get("key") or os.environ.get("WANDB_API_KEY")
-    if not wandb_key:
+    if wandb_mode not in {"offline", "disabled", "dryrun"} and not wandb_key:
         raise ValueError(
             "W&B API key not found. Please set it in configs/management.yaml "
-            "or via the WANDB_API_KEY environment variable."
+            "or via the WANDB_API_KEY environment variable, or set "
+            "WANDB_MODE=offline/disabled for local smoke runs."
         )
-    try:
-        _wandb.login(key=wandb_key)
-    except Exception as e:
-        print(f"Failed to login to wandb: {e}")
-        raise
+    if wandb_key and wandb_mode not in {"disabled"}:
+        try:
+            _wandb.login(key=wandb_key)
+        except Exception as e:
+            print(f"Failed to login to wandb: {e}")
+            raise
+
+    init_kwargs = {
+        "project": wandb_cfg.project,
+        "entity": wandb_cfg.entity,
+        "save_code": wandb_cfg.get("save_code", True),
+        "name": config.DistillConfig.name,
+        "group": config.DistillConfig.name,
+        "config": config.to_dict(),
+        "mode": wandb_mode,
+    }
+    if wandb_id is not None:
+        init_kwargs["id"] = wandb_id
+        init_kwargs["resume"] = "allow"
 
     return _wandb.init(
-        project=wandb_cfg.project,
-        entity=wandb_cfg.entity,
-        save_code=wandb_cfg.get("save_code", True),
-        name=config.DistillConfig.name,
-        group=config.DistillConfig.name,
-        resume=wandb_id,
-        config=config.to_dict(),
+        **init_kwargs
     )
 
 def init_loguru():
     wandb_run = _state["wandb"]
     assert wandb_run is not None, "Wandb is not initialized."
-    # import loguru
-    from loguru import logger as _logger
+    log_path = os.path.join(str(wandb_run.dir), "main.log")
+    try:
+        from loguru import logger as _logger
+    except ModuleNotFoundError:
+        fallback = BasicFileLogger(log_path)
+        fallback.warning("loguru is not installed; using the basic Mohawk logger.")
+        return fallback
+
     # Remove the default stdout handler
     _logger.remove()
 
     # Add custom stdout & file handlers
     console = Console()
     _logger.add(sink=console.print, format="{message}", level="INFO")  # to console (stdout)
-    log_path = os.path.join(str(wandb_run.dir), "main.log")
     _logger.add(sink=log_path, level="TRACE")  # to log file
 
     return _logger

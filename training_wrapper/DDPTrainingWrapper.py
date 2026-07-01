@@ -1,10 +1,11 @@
+import contextlib
 import os
 
 import torch
 import torch.distributed as torch_dist
 from torch.nn.parallel.distributed import DistributedDataParallel, _MixedPrecision
 
-from distill.utils import setup_optimizer, setup_scheduler, setup_gradients
+from distill.utils import load_scheduler, setup_optimizer, setup_scheduler, setup_gradients
 from utils.distributed import is_master, local_rank
 from utils.logging import logger
 
@@ -17,6 +18,7 @@ class DDPTrainingWrapper(BaseTrainingWrapper):
         config,
         compile_model=False,
         model_dtype=torch.float32,
+        mixed_precision=False,
         weights_from_rank0=False,
         *args,
         **kwargs,
@@ -24,23 +26,31 @@ class DDPTrainingWrapper(BaseTrainingWrapper):
         super().__init__(*args, **kwargs)
         self.config = config
         self.model_dtype = model_dtype
+        self.mixed_precision = mixed_precision
         self.weights_from_rank0 = weights_from_rank0
+        self.device = torch.device(f"cuda:{local_rank}")
+        logger.info(f"[TRAINING_WRAPPER] Device: {self.device}")
         if isinstance(self.model_dtype, str):
             self.model_dtype = getattr(torch, self.model_dtype)
-        # 1. Setup gradients (before DDP, if in train mode)
-        if self.mode == "train":
-            self._setup_gradients()
-        # 2. Broadcast weights from rank 0 if needed (before moving to device)
+        if self.mixed_precision and self.model_dtype == torch.bfloat16:
+            logger.warning("Cannot use mixed precision with bfloat16. Setting mixed_precision=False.")
+            self.mixed_precision = False
+        # 1. Setup gradients before DDP. Inference wrappers must be frozen so
+        # DDP does not create reducer state for teacher-only forward passes.
+        self._setup_gradients()
+        # 2. Move model to device (before broadcast; NCCL has no CPU backend)
+        self._model = self._model.to(self.device)
+        # 3. Broadcast weights from rank 0 if needed
         if self.weights_from_rank0:
             self._broadcast_weights_from_rank0()
-        # 3. Move model to device (before DDP)
-        self._model = self._model.to(local_rank)
         # 4. Compile model (before DDP)
         self.compile_model = compile_model
         if self.compile_model:
             self._model = self._compile_model(self._model)
-        # 5. setup DDP
-        self._model = self._setup_ddp()
+        # 5. setup DDP for trainable models only. Inference teachers only need
+        # replicated weights and should not create reducer state.
+        if self.mode == "train":
+            self._model = self._setup_ddp()
         # 6. setup train mode
         if self.mode == "train":
             self._setup_train_mode()
@@ -56,34 +66,69 @@ class DDPTrainingWrapper(BaseTrainingWrapper):
 
     @property
     def module(self):
-        return self._model.module
+        return self._model.module if isinstance(self._model, DistributedDataParallel) else self._model
 
     def __call__(self, *args, **kwargs):
-        with torch.cuda.amp.autocast(enabled=True, dtype=torch.bfloat16):
+        # See CentralizedTrainingWrapper.__call__: no_grad in inference mode is
+        # belt-and-braces against accidentally building an autograd graph
+        # through a teacher when an upstream tensor has requires_grad=True.
+        grad_ctx = torch.no_grad() if self.mode == "inference" else contextlib.nullcontext()
+        with grad_ctx, torch.amp.autocast(
+            device_type="cuda",
+            enabled=self.mixed_precision,
+            dtype=torch.bfloat16,
+        ):
             return self.model(*args, **kwargs)
+
+    def no_sync(self):
+        if isinstance(self._model, DistributedDataParallel):
+            if not getattr(self, "_logged_no_sync", False):
+                logger.info("[TRAINING_WRAPPER] Using DDP no_sync for gradient accumulation.")
+                self._logged_no_sync = True
+            return self._model.no_sync()
+        return contextlib.nullcontext()
     
     def backward(self, loss):
         """
         Backward pass with the loss
         """
         assert not self.mode == "inference", "Cannot backward in inference mode."
-        # Backward pass
-        self.scaler.scale(loss).backward()
-        # loss.backward()
+        if self.mixed_precision:
+            self.scaler.scale(loss).backward()
+        else:
+            loss.backward()
 
     def step(self):
         """
         Step the optimizer and scheduler.
         """
         assert not self.mode == "inference", "Cannot step optimizer in inference mode."
-        # Optimizer step
-        # self.optimizer.step()
-        self.scaler.step(self.optimizer)
-        self.scaler.update()
+        if self.mixed_precision:
+            self.scaler.step(self.optimizer)
+            self.scaler.update()
+        else:
+            self.optimizer.step()
         # clean up and step
         self.optimizer.zero_grad()
         self.scheduler.step()
         return
+
+    def gather(self, value):
+        """
+        Gather a value from all processes and return it on every rank.
+        """
+        if not torch_dist.is_initialized():
+            return value
+        world_size = torch_dist.get_world_size()
+        if isinstance(value, torch.Tensor):
+            gathered = [torch.zeros_like(value) for _ in range(world_size)]
+            torch_dist.all_gather(gathered, value)
+            if value.dim() == 0:
+                gathered = [v.unsqueeze(0) for v in gathered]
+            return torch.cat(gathered, dim=0)
+        gathered = [None] * world_size
+        torch_dist.all_gather_object(gathered, value)
+        return torch.tensor(gathered)
 
     def _compile_model(self, model):
         """
@@ -112,15 +157,16 @@ class DDPTrainingWrapper(BaseTrainingWrapper):
         kwargs = {}
         kwargs["device_ids"] = [local_rank]
         kwargs["output_device"] = local_rank
+        # Some distill steps (e.g. matrices) only backprop through a subset of
+        # the model's parameters, so DDP's reducer needs to know to expect
+        # missing grads. Default to False to preserve the perf path.
+        kwargs["find_unused_parameters"] = self.config.TrainConfig.get(
+            "find_unused_parameters", False
+        )
+        kwargs["static_graph"] = self.config.TrainConfig.get("static_graph", False)
 
-        # Mixed precision scaler (for AMP)
-        if self.mode == "train":
-            self.scaler = torch.cuda.amp.GradScaler()
-
-        # TODO: Check if this is necessary:
-        # kwargs["find_unused_parameters"] = True
-        # kwargs["static_graph"] = True
-        # kwargs["gradient_as_bucket_view"] = True
+        if self.mode == "train" and self.mixed_precision:
+            self.scaler = torch.amp.GradScaler("cuda")
 
         return DistributedDataParallel(self._model, **kwargs)
 
@@ -147,6 +193,25 @@ class DDPTrainingWrapper(BaseTrainingWrapper):
         total_grad_steps = int(self.config.TrainConfig["n_batches"] / self.config.TrainConfig.get("accumulation_steps", 1))
         self.optimizer = setup_optimizer(self._model, self.config.OptimizerConfig)
         self.scheduler = setup_scheduler(self.optimizer, self.config.OptimizerConfig, total_grad_steps)
+        load_cfg = getattr(self.config, "LoadConfig", None)
+        if load_cfg is None:
+            return
+        if hasattr(load_cfg, "optimizer"):
+            opt_state = torch.load(
+                os.path.join(load_cfg.optimizer.path, "optimizer.pth"),
+                map_location="cpu",
+            )
+            self.optimizer.load_state_dict(opt_state)
+        if hasattr(load_cfg, "scheduler"):
+            scheduler_state = load_scheduler(load_cfg.scheduler)
+            configured_num_steps = self.scheduler.num_steps
+            self.scheduler.load_state_dict(scheduler_state)
+            if self.scheduler._step_count > configured_num_steps:
+                raise ValueError(
+                    f"Loaded scheduler step {self.scheduler._step_count} exceeds "
+                    f"configured total steps {configured_num_steps}."
+                )
+            self.scheduler.num_steps = configured_num_steps
 
     def _broadcast_weights_from_rank0(self):
         """

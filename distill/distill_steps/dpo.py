@@ -5,7 +5,7 @@ import torch.nn.functional as F
 
 from training_wrapper import BaseTrainingWrapper
 from utils.config import Config
-from utils.distributed import local_rank
+from utils.distributed import get_device
 
 
 def get_logprobs(
@@ -120,7 +120,8 @@ def distill_step(
                 break
     if prompt_key not in batch:
         raise ValueError(f"Could not find prompt in batch. Available keys: {list(batch.keys())}")
-    input_ids = batch[prompt_key].to(local_rank)
+    device = get_device()
+    input_ids = batch[prompt_key].to(device)
     
     # Chosen keys
     if chosen_key is None:
@@ -131,7 +132,7 @@ def distill_step(
                 break
     if chosen_key not in batch:
         raise ValueError(f"Could not find chosen response in batch. Available keys: {list(batch.keys())}")
-    chosen_ids = batch[chosen_key].to(local_rank)
+    chosen_ids = batch[chosen_key].to(device)
     
     # Rejected keys
     if rejected_key is None:
@@ -142,11 +143,11 @@ def distill_step(
                 break
     if rejected_key not in batch:
         raise ValueError(f"Could not find rejected response in batch. Available keys: {list(batch.keys())}")
-    rejected_ids = batch[rejected_key].to(local_rank)
+    rejected_ids = batch[rejected_key].to(device)
     
     position_ids = batch.get("position_ids", None)
     if position_ids is not None:
-        position_ids = position_ids.to(local_rank)
+        position_ids = position_ids.to(device)
     
     vocab_size = cfg.ComponentsConfig.input.vocab_size
     
@@ -180,4 +181,3 @@ def distill_step(
     student_wrapper.backward(loss)
     
     return [loss.item()]
-

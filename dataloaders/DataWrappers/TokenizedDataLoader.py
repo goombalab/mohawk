@@ -17,10 +17,14 @@ class TokenizedDataLoader(DataLoader, BaseDataWrapper):
         chat_template=None,
         add_generation_prompt=False,
         return_dict=False,
+        local_files_only=False,
         **kwargs
     ):
         # setup tokenizer
-        self._tokenizer = AutoTokenizer.from_pretrained(tokenizer)
+        self._tokenizer = AutoTokenizer.from_pretrained(
+            tokenizer,
+            local_files_only=local_files_only,
+        )
 
         # setup special tokens
         if "pad_token" not in self._tokenizer.special_tokens_map:

@@ -42,3 +42,14 @@ class SequentialLoader(BaseDataGenerator, TokenizedDataLoader):
         
         self.samples_seen += 1
         return next_batch
+
+    def close(self):
+        for iterator in self.iterators or []:
+            close = getattr(iterator, "close", None)
+            if close is not None:
+                close()
+        self.iterators = None
+        for loader in self.loaders:
+            close = getattr(loader, "close", None)
+            if close is not None:
+                close()

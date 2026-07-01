@@ -28,8 +28,10 @@ class BaseDataGenerator(IterableDataset):
     def __getattr__(self, attr):
         if attr in self.__dict__:
             return self.__dict__[attr]
-        elif hasattr(self.iterable, attr):
+        try:
             return getattr(self.iterable, attr)
+        except (AttributeError, NotImplementedError):
+            pass
         raise AttributeError(f"Neither TorchDataLoader nor iterable have the attribute '{attr}'")
     
     def __str__(self, tabs=0, **kwargs):
@@ -37,4 +39,3 @@ class BaseDataGenerator(IterableDataset):
     
     def __repr__(self, *args, **kwargs):
         return self.__str__(*args, **kwargs)
-

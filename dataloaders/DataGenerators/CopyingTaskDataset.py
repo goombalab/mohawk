@@ -7,10 +7,16 @@ import torch
 import random
 
 class CopyingTaskDataset(BaseDataGenerator):
-    def __init__(self, tokenizer_name: str, max_seq_len: int = 512, **kwargs):
+    def __init__(
+        self,
+        tokenizer_name: str,
+        max_seq_len: int = 512,
+        local_files_only: bool = False,
+        **kwargs
+    ):
         super().__init__(**kwargs)
         self.max_seq_len = max_seq_len
-        self.tokenizer = get_tokenizer(tokenizer_name)
+        self.tokenizer = get_tokenizer(tokenizer_name, local_files_only=local_files_only)
 
         self.pad_token_id = self.tokenizer.pad_token_id if self.tokenizer.pad_token_id is not None else self.tokenizer.eos_token_id
         assert self.pad_token_id is not None, "Either pad_token_id or eos_token_id should be defined"

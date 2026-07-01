@@ -27,12 +27,13 @@ class NeedleInHaystackDataset(BaseDataGenerator):
         num_needle_q: int = 1,
         random_seed: int = 42,
         remove_newline_tab: bool = False,
+        local_files_only: bool = False,
         **kwargs
     ):
         super().__init__(**kwargs)
         self.max_seq_len = max_seq_len
         self.tokens_to_generate = tokens_to_generate
-        self.tokenizer = get_tokenizer(tokenizer_name)
+        self.tokenizer = get_tokenizer(tokenizer_name, local_files_only=local_files_only)
 
         self.pad_token_id = (
             self.tokenizer.pad_token_id

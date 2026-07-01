@@ -65,3 +65,18 @@ class RoundRobinLoader(BaseDataGenerator, TokenizedDataLoader):
             loader.load_state_dict(state_dict[f"loader_{i}"])
         self._idx = state_dict["_idx"]
         self.ratio = state_dict["ratio"]
+
+    def close(self):
+        seen = set()
+        for iterator in self.iterators or []:
+            if id(iterator) in seen:
+                continue
+            seen.add(id(iterator))
+            close = getattr(iterator, "close", None)
+            if close is not None:
+                close()
+        self.iterators = None
+        for loader in self.loaders:
+            close = getattr(loader, "close", None)
+            if close is not None:
+                close()

@@ -1,3 +1,5 @@
+import os
+
 import datasets
 import datasets.distributed
 
@@ -9,6 +11,19 @@ datasets.config.STREAMING_READ_RETRY_INTERVAL = 5  # default is 5
 
 from dataloaders.BaseDataGenerator import BaseDataGenerator
 
+
+def _to_builtin(value):
+    if hasattr(value, "to_dict"):
+        return value.to_dict()
+    if isinstance(value, list):
+        return [_to_builtin(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_to_builtin(item) for item in value)
+    if isinstance(value, dict):
+        return {key: _to_builtin(item) for key, item in value.items()}
+    return value
+
+
 class HFDataset(BaseDataGenerator):
     def __init__(
         self,
@@ -17,9 +32,24 @@ class HFDataset(BaseDataGenerator):
         streaming: bool = False,
         split: str = "train",
         skip_samples: int = 0,
-        **kwargs
+        shuffle_buffer_size: int = 10000,
+        **dataset_kwargs,
     ):
-        self._initialize(path=path, name=name, streaming=streaming, split=split, skip_samples=skip_samples)
+        # setup_dataloader threads the previous pipeline stage through every
+        # constructor; source datasets have no upstream iterable.
+        dataset_kwargs.pop("iterable", None)
+        dataset_kwargs = {
+            key: _to_builtin(value) for key, value in dataset_kwargs.items()
+        }
+        self._initialize(
+            path=path,
+            name=name,
+            streaming=streaming,
+            split=split,
+            skip_samples=skip_samples,
+            shuffle_buffer_size=shuffle_buffer_size,
+            dataset_kwargs=dataset_kwargs,
+        )
 
     def _initialize(
             self,
@@ -28,7 +58,9 @@ class HFDataset(BaseDataGenerator):
             streaming: bool = False,
             split: str = "train",
             skip_samples: int = 0,
-            _index: int = -1,
+            _index: int = 0,
+            shuffle_buffer_size: int = 10000,
+            dataset_kwargs: dict = None,
         ):
         """
         Initialize the dataset.
@@ -37,29 +69,34 @@ class HFDataset(BaseDataGenerator):
         self.name = name
         self.streaming = streaming
         self.split = split
-        self._index = _index
+        self.shuffle_buffer_size = shuffle_buffer_size
+        self.dataset_kwargs = dict(dataset_kwargs or {})
+        self._index = max(0, _index)
         self.in_use = False
+        self._iterator = None
 
         # Initialize the dataset
         self.dataset = datasets.load_dataset(
             path=self.path,
             name=self.name,
-            streaming=self.streaming
+            streaming=self.streaming,
+            cache_dir=os.environ.get("HF_DATASETS_CACHE"),
+            **self.dataset_kwargs,
             )
         
         assert self.split in self.dataset.keys(), f"[HFDataset] Split {self.split} not found in dataset."
         self.dataset = self.dataset[self.split]
 
         if self.streaming:
-            self.dataset = self.dataset.shuffle(seed=42, buffer_size=10000)
+            self.dataset = self.dataset.shuffle(seed=42, buffer_size=self.shuffle_buffer_size)
 
-        if self._index > -1 and skip_samples > 0:
+        if self._index > 0 and skip_samples > 0:
             logger.warning(f"[HFDataset] Cannot skip samples and set index at the same time. Skipping samples will be ignored.")
             skip_samples = 0
             
         self._index += skip_samples
 
-        if self._index > -1:
+        if self._index > 0:
             self.dataset = self.dataset.skip(self._index)
             logger.info(f"[HFDataset] Starting {self.path} from index {self._index}.")
 
@@ -85,6 +122,8 @@ class HFDataset(BaseDataGenerator):
             "name": self.name,
             "streaming": self.streaming,
             "split": self.split,
+            "shuffle_buffer_size": self.shuffle_buffer_size,
+            "dataset_kwargs": self.dataset_kwargs,
             "_index": self._index
         }
     
@@ -99,10 +138,26 @@ class HFDataset(BaseDataGenerator):
             raise StopIteration("Dataset has already been iterated over. Please create a new instance of the dataset.")
 
         self.in_use = True
+        self._iterator = iter(self.dataset)
 
         try:
-            for sample in self.dataset:
-                yield sample
+            for sample in self._iterator:
                 self._index += 1
+                yield sample
         finally:
+            self.close()
             self.in_use = False
+
+    def close(self):
+        iterator = self._iterator
+        self._iterator = None
+        if iterator is None:
+            return
+
+        close = getattr(iterator, "close", None)
+        if close is None:
+            return
+        try:
+            close()
+        except Exception as exc:
+            logger.warning(f"[HFDataset] Failed to close streaming iterator cleanly: {exc}")

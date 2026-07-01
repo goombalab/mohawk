@@ -1,8 +1,5 @@
 LOAD:
   - ./configs/Phi/1.5B/base/_hstates.yaml
-  - ./configs/Phi/1.5B/base/optimizer.yaml
-  - ./configs/Phi/1.5B/base/train.yaml
-  - ./configs/management.yaml
   - ./configs/Phi/1.5B/hybrid/components.yaml
   
 DistillConfig:
@@ -11,5 +8,11 @@ DistillConfig:
   type: hstates # hstates vs supervised
 
 LoadConfig:
-  model_path: <path-to-checkpoint>  # Replace with your checkpoint path
-  optimizer_path: null
+  model:
+    - null
+    - path: <path-to-checkpoint>  # Replace with your checkpoint path
+      strict: false
+  optimizer:
+    - null
+    - path: null
+      strict: false

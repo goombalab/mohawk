@@ -1,17 +1,9 @@
 LOAD:
 - ./configs/Llama/8B/bases/_supervised.yaml
-- ./configs/components/llama.yaml
+- ./configs/Llama/8B/bases/llama.yaml
 
 DistillConfig:
   name: llama
-
-TrainConfig:
-  DataConfig:
-    data_dir: <path-to-c4-dataset>  # Replace with your C4 dataset path
-    loader: C4DataLoader
-    dataset_type: classic
-    tokenizer: ${TeacherConfig.dir}
-    cycle: true
 
 LoadConfig:
   model:

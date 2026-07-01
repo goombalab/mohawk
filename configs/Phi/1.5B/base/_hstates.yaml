@@ -9,8 +9,7 @@ DistillConfig:
   type: hstates
 
 TrainConfig:
-  DataConfig:
-    n_tokens: !!float 1e10
+  n_tokens: !!float 1e10
 
 EvalConfig:
 
@@ -30,14 +29,18 @@ EvalConfig:
   eval_at_end: true
   save_latest: true
   mixed_precision: true
+  n_batches: 200
   DataConfig:
-    data_dir: <path-to-c4-dataset>  # Replace with your C4 dataset path
-    loader: C4DataLoader
-    dataset_type: classic
-    tokenizer: ${DistillConfig.teacher_model}
-    cycle: false
-    num_workers: 4
-    max_seq_len: 2048
-    seed: 42
-    batch_size: 16
-    n_tokens: !!float 1e7
+    loaders: [HFDataset, Tokenize, PaddingDataLoader, TorchDataLoader]
+    HFDataset:
+      path: allenai/c4
+      name: en.noclean
+      streaming: true
+    Tokenize:
+      tokenizer: ${TeacherConfig.dir}
+      collate_type: text
+    PaddingDataLoader:
+      max_seq_len: 2048
+    TorchDataLoader:
+      num_workers: 0
+      batch_size: 16

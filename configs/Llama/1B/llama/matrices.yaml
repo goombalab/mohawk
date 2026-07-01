@@ -1,6 +1,6 @@
 LOAD:
 - ./configs/Llama/1B/bases/_matrices.yaml
-- ./configs/Llama/1B/bases/llama.yaml
+- ./configs/Llama/1B/llama/llama_architecture.yaml
 
 DistillConfig:
   name: llama

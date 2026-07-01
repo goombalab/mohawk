@@ -36,7 +36,7 @@ EvalConfig:
   eval_at_start: false
   eval_at_end: true
   save_latest: true
-  n_tokens: !!float 1e7
+  n_batches: 100
   DataConfig:
     loaders: [JSONIterableDataset, Tokenize, PaddingDataLoader, TorchDataLoader]
     JSONIterableDataset:

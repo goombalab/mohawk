@@ -13,6 +13,13 @@ SSM_INPUT: {
           activation: identity, bias: false, norm_cls: none,
           initializer: {z: default, a_log: default, x: default, B: default, C: default, D: default, out: default, convolution: identity}
           }
+ROPE_SCALING: {
+  factor: !!float 8,
+  low_freq_factor: !!float 1,
+  high_freq_factor: !!float 4,
+  original_max_position_embeddings: 8192,
+  rope_type: llama3,
+  }
 
 
 TeacherConfig:

@@ -1,7 +1,7 @@
 LOAD:
 # - ./configs/Falcon/7B/bases/_supervised.yaml
 - ./configs/Falcon/7B/bases/_post_supervised.yaml
-# - ./configs/Falcon/7B/bases/llama_mamba2.yaml
+- ./configs/Falcon/7B/bases/falcon.yaml
 
 DistillConfig:
   name: pure_3B_C4

@@ -1,6 +1,6 @@
 LOAD:
 - ./configs/Falcon/7B/bases/_matrices.yaml
-# - ./configs/Falcon/7B/bases/llama_mamba22.yaml
+- ./configs/Falcon/7B/bases/falcon.yaml
 
 DistillConfig:
   name: pure_vanilla_3B

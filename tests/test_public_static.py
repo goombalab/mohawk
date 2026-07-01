@@ -96,10 +96,10 @@ def test_phase_1_fresh_environment_evidence_is_recorded():
     assert phase_statuses["Interactive Slurm GPU probe"] == "PASSED_REAL_SMOKE"
     assert phase_statuses["Interactive Slurm Torch CUDA probe"] == "PASSED_REAL_SMOKE"
     assert phase_statuses["Fresh default runtime venv creation"] == "PASSED_REAL_SMOKE"
-    assert phase_statuses["Fresh CPU manifest venv creation"] == "PASSED_REAL_SMOKE"
-    assert phase_statuses["Fresh CPU manifest install, sandbox"] == "BLOCKED_RESOURCE"
-    assert phase_statuses["Fresh CPU manifest install, network allowed"] == "PASSED_REAL_SMOKE"
-    assert phase_statuses["Fresh CPU manifest validation commands"] == "PASSED_REAL_SMOKE"
+    assert phase_statuses["Fresh lightweight validation venv creation"] == "PASSED_REAL_SMOKE"
+    assert phase_statuses["Fresh lightweight install, sandbox"] == "BLOCKED_RESOURCE"
+    assert phase_statuses["Fresh lightweight install, network allowed"] == "PASSED_REAL_SMOKE"
+    assert phase_statuses["Fresh lightweight validation commands"] == "PASSED_REAL_SMOKE"
     assert phase_statuses["Fresh default requirements install, sandbox"] == "BLOCKED_RESOURCE"
     assert phase_statuses["Fresh default requirements install, network allowed"] == "PASSED_REAL_SMOKE"
     assert phase_statuses["Fresh default runtime validation commands"] == "PASSED_REAL_SMOKE"
@@ -159,7 +159,7 @@ def test_phase_1_fresh_environment_evidence_is_recorded():
     assert "execve()" in matrix
     assert "Disk quota exceeded" in matrix
     assert "requirements-ssm-cuda.txt" in matrix
-    assert "requirements-cpu.txt" in matrix
+    assert "pip install pytest PyYAML" in matrix
     assert "19 passed, 8 skipped" in matrix
     assert "103 passed, 1 skipped" in matrix
 
@@ -2681,9 +2681,8 @@ def test_docs_scope_default_and_ssm_requirements_installs():
     ]
 
     assert "python -m pip install -r requirements.txt" in readme
-    assert "python -m pip install -r requirements-cpu.txt" in readme
+    assert "python -m pip install pytest PyYAML" in readme
     assert "python -m pip install --no-build-isolation -r requirements-ssm-cuda.txt" in readme
-    assert "requirements-cpu.txt" in readme
     assert "requirements-ssm-cuda.txt" in readme
     assert "deliberately excludes the CUDA-built SSM/Mamba kernels" in readme
     assert "`mamba_ssm` and `causal_conv1d` were absent" in readme
@@ -2749,9 +2748,8 @@ def test_docs_scope_default_and_ssm_requirements_installs():
     assert "only\nvalidates config loadability" in readme
 
     assert "python -m pip install -r requirements.txt" in contributing
-    assert "python -m pip install -r requirements-cpu.txt" in contributing
+    assert "python -m pip install pytest PyYAML" in contributing
     assert "python -m pip install --no-build-isolation -r requirements-ssm-cuda.txt" in contributing
-    assert "requirements-cpu.txt" in contributing
     assert "requirements-ssm-cuda.txt" in contributing
     assert "103 passed, 1 skipped" in contributing
     assert "does\nnot install the CUDA-built SSM/Mamba kernels" in contributing
@@ -3544,7 +3542,7 @@ def test_latest_real_validation_commands_use_allowed_statuses():
     commands = "\n".join(row[0] for row in rows)
     outcomes = "\n".join(row[1] for row in rows)
     assert "Fresh default runtime venv created" in outcomes
-    assert "Fresh CPU manifest venv created" in outcomes
+    assert "Fresh lightweight validation venv created" in outcomes
     assert "pytest-9.1.1" in outcomes
     assert "driver not visible" in outcomes
     assert "NVIDIA GB300" in outcomes

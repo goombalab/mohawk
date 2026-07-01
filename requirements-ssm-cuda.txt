@@ -1,0 +1,23 @@
+# Optional CUDA/SSM dependency layer.
+#
+# Install requirements.txt first, then install this file on CUDA-devel systems
+# with build isolation disabled so package setup can import the already
+# installed torch CUDA build:
+#
+#   python -m pip install -r requirements.txt
+#   python -m pip install --no-build-isolation -r requirements-ssm-cuda.txt
+#
+# This layer is expected to need a compatible NVIDIA driver, CUDA toolkit/nvcc,
+# PyTorch CUDA build, and matching wheels or a working compiler toolchain. For
+# source builds, set CUDA_HOME and TORCH_CUDA_ARCH_LIST for the target GPU. Set
+# MAMBA_FORCE_BUILD=TRUE and CAUSAL_CONV1D_FORCE_BUILD=TRUE when a local build is
+# required instead of an upstream wheel.
+
+# Mamba 2.3.2.post1 is validated on Python 3.12, Torch 2.12.1+cu130, and GB300.
+# Its Mamba3 dependencies add TileLang, Quack, and CUTLASS packages; Quack is
+# pinned to the version used by the fresh-install and CUDA validation evidence.
+# Mohawk's component import guard keeps the repository's top-level `utils`
+# package ahead of third-party packages from this stack.
+mamba-ssm==2.3.2.post1
+causal-conv1d==1.6.2.post1
+quack-kernels==0.5.3

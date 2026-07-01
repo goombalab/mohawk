@@ -32,8 +32,11 @@ def suppress_warnings():
         warnings.showwarning = lambda *args, **kwargs: None
         # Import libs whose first-import warnings you want to silence
         import numpy
-        from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR
-        from pl_bolts.utils.stability import UnderReviewWarning  # noqa: F401
+        try:
+            from pl_bolts.optimizers.lr_scheduler import LinearWarmupCosineAnnealingLR  # noqa: F401
+            from pl_bolts.utils.stability import UnderReviewWarning  # noqa: F401
+        except ModuleNotFoundError:
+            pass
 
     # --- Python logging (root) ---
     import logging as pylog

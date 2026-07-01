@@ -2,7 +2,6 @@ ManagementConfig:
   wandb:
     # W&B API key should be set via WANDB_API_KEY environment variable
     # The code will check for WANDB_API_KEY env var if key is not set here
-    # key: "your-wandb-api-key-here"
     project: "mohawk" # wandb project name
     entity: "your-wandb-entity"  # Change to your W&B entity/username
     save_code: true
@@ -16,7 +15,7 @@ ManagementConfig:
   
   env_vars:
     # WANDB
-    WANDB_MODE: "online" # online/offline/disabled
+    WANDB_MODE: "disabled" # online/offline/disabled; set online with WANDB_API_KEY for W&B logging
     WANDB_DIR: /tmp/wandb  # Change to your preferred W&B directory
     # TORCH
     TORCH_HOME: ${ManagementConfig.paths.base_dir}/torch_home

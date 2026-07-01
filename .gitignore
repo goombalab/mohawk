@@ -1,0 +1,32 @@
+nemotron_abick
+
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments and local config
+.venv/
+venv/
+env/
+.env
+.env.*
+
+# Experiment outputs
+wandb/
+logs/
+runs/
+checkpoints/
+artifacts/
+outputs/
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+
+# Generated plots/reports
+*.png
+*.pdf

@@ -2,6 +2,7 @@ import torch.nn as nn
 from torch import Tensor
 from transformers.models.phi.configuration_phi import PhiConfig
 
+from components._factory import apply_module_factory_kwargs
 from components.registry import Registry
 from external_models.modeling_phi import PhiMLP
 
@@ -37,14 +38,15 @@ class Block(nn.Module):
 
 
         # Other components
-        self.input_layernorm = nn.LayerNorm(self.d_model, eps=1e-5).to(**factory_kwargs)
+        self.input_layernorm = nn.LayerNorm(self.d_model, eps=1e-5, **factory_kwargs)
         self.mlp = PhiMLP(
             PhiConfig(
                 hidden_size=self.d_model,
                 intermediate_size=self.d_model * 4,
                 hidden_act="gelu_new",
             )
-        ).to(**factory_kwargs)
+        )
+        self.mlp = apply_module_factory_kwargs(self.mlp, factory_kwargs)
         self.resid_dropout = nn.Dropout(config.input.resid_dropout)
 
         return

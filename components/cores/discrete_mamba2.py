@@ -10,10 +10,16 @@ try:
 except ImportError:
     causal_conv1d_fn, causal_conv1d_update = None, None
 
-from mamba_ssm.ops.triton.ssd_combined import mamba_chunk_scan_combined
+try:
+    from mamba_ssm.ops.triton.ssd_combined import mamba_chunk_scan_combined
+    from mamba_ssm.modules.ssd_minimal import ssd_minimal_discrete as mamba_ssd_minimal_discrete
+except ImportError:
+    mamba_chunk_scan_combined = None
+    mamba_ssd_minimal_discrete = None
 
 from .discrete_mamba2_ref import materialize_mixer
-from mamba_ssm.modules.ssd_minimal import ssd_minimal_discrete
+from .discrete_mamba2_ref import ssd_minimal_discrete as ref_ssd_minimal_discrete
+from .discrete_mamba2_ref import step as ref_step
 
 try:
     from mamba_ssm.ops.triton.selective_state_update import selective_state_update
@@ -27,6 +33,10 @@ except ImportError:
 
 from einops import repeat
 from functools import partial
+
+from components._repo_path import ensure_repo_root_on_path
+
+ensure_repo_root_on_path()
 
 from utils.init_weights import _init_weights
 
@@ -218,16 +228,32 @@ class Mixer(nn.Module):
 
         # SSM forward
         if use_ref_impl:
-            result = ssd_minimal_discrete(
-                X=x,
-                A=-A_log.exp().to(B.dtype),
-                B=B,
-                C=C,
-                block_len=chunk_size,
-                initial_states=None,
-            )
+            if mamba_ssd_minimal_discrete is None:
+                result = ref_ssd_minimal_discrete(
+                    X=x,
+                    A_log=-F.softplus(A_log).to(B.dtype),
+                    B=B,
+                    C=C,
+                    block_len=chunk_size,
+                    initial_states=None,
+                )
+            else:
+                result = mamba_ssd_minimal_discrete(
+                    X=x,
+                    A=-A_log.exp().to(B.dtype),
+                    B=B,
+                    C=C,
+                    block_len=chunk_size,
+                    initial_states=None,
+                )
             
         else:
+            if mamba_chunk_scan_combined is None:
+                raise ImportError(
+                    "DiscreteMamba2 fast path requires mamba_ssm. Install the "
+                    "optional CUDA/SSM dependencies or set `use_ref_impl: true` "
+                    "for the reference implementation."
+                )
             if position_ids is not None:
                 # Ensure position_ids has correct batch dimension
                 if position_ids.dim() == 1:
@@ -267,7 +293,7 @@ class Mixer(nn.Module):
             y, ssm_state = result
             state["ssm"].copy_(ssm_state)
         else:
-            y = result
+            y = result[0] if isinstance(result, tuple) else result
 
         y = y + torch.einsum("h,blhp->blhp", self.D, x)
 
@@ -330,19 +356,33 @@ class Mixer(nn.Module):
         C = rearrange(C, "b (h s) -> b h s", h=self.n_qk_heads)
 
         state["ssm"] = state["ssm"].to(x.dtype)
-        zeros = torch.zeros((self.n_v_heads, self.headdim), device=A_log.device).to(dtype=x.dtype)
-        ones = torch.ones((self.n_v_heads, self.headdim, self.d_state), device=A_log.device).to(dtype=x.dtype)
-        y = selective_state_update(
-            x=x/F.softplus(A_log).to(x.dtype).unsqueeze(-1),
-            dt=repeat(A_log, "b h -> b h p", p=self.headdim),
-            dt_softplus=True,
-            A=-ones,
-            B=B,
-            C=C,
-            state=state["ssm"], # will be updated in place
-            dt_bias=zeros,
-            D=zeros,
-        )
+        if self.use_ref_impl:
+            y, ssm_state = ref_step(
+                x=x,
+                B=B,
+                C=C,
+                A_log=A_log,
+                state=state,
+            )
+            state["ssm"].copy_(ssm_state)
+        elif selective_state_update is None:
+            raise ImportError(
+                "DiscreteMamba2 autoregressive step requires mamba_ssm selective_state_update."
+            )
+        else:
+            zeros = torch.zeros((self.n_v_heads, self.headdim), device=A_log.device).to(dtype=x.dtype)
+            ones = torch.ones((self.n_v_heads, self.headdim, self.d_state), device=A_log.device).to(dtype=x.dtype)
+            y = selective_state_update(
+                x=x/F.softplus(A_log).to(x.dtype).unsqueeze(-1),
+                dt=repeat(A_log, "b h -> b h p", p=self.headdim),
+                dt_softplus=True,
+                A=-ones,
+                B=B,
+                C=C,
+                state=state["ssm"], # will be updated in place
+                dt_bias=zeros,
+                D=zeros,
+            )
 
         y = y + self.D[:, None] * x
         y = rearrange(y, "b h p -> b (h p)")
@@ -403,17 +443,20 @@ class Mixer(nn.Module):
         return states
 
     def convolutional_forward(self, xBC, padded_len):
-        if causal_conv1d_fn is None or self.activation not in [
-            "silu",
-            "swish",
-            "identity",
-        ]:
+        xBC_fast = xBC.transpose(1, 2)
+        fast_conv_supported = (
+            causal_conv1d_fn is not None
+            and self.activation in ["silu", "swish", "identity"]
+            and xBC_fast.stride(0) % 8 == 0
+            and xBC_fast.stride(2) % 8 == 0
+        )
+        if not fast_conv_supported:
             xBC = self.act(
                 self.conv1d(xBC.transpose(1, 2))[..., :padded_len].transpose(1, 2)
             )
         else:
             xBC = causal_conv1d_fn(
-                xBC.transpose(1, 2).contiguous(),
+                xBC_fast,
                 rearrange(self.conv1d.weight, "d 1 w -> d w"),
                 self.conv1d.bias,
                 activation=None if self.activation == "identity" else self.activation,

@@ -1,6 +1,7 @@
 from torch import nn
 from transformers.modeling_attn_mask_utils import _prepare_4d_causal_attention_mask
 
+from components._factory import apply_module_factory_kwargs
 from external_models.modeling_phi import PHI_ATTENTION_CLASSES, PhiConfig
 
 
@@ -12,6 +13,10 @@ class Mixer(nn.Module):
             **kwargs
             ):
         super().__init__()
+        factory_kwargs = {
+            "device": kwargs.pop("device", None),
+            "dtype": kwargs.pop("dtype", None),
+        }
         self.model_cfg = kwargs
         self.weight_init_cfg = initializer
 
@@ -20,6 +25,7 @@ class Mixer(nn.Module):
         self.self_attn = PHI_ATTENTION_CLASSES[type](
             PhiConfig(**self.model_cfg), layer_idx
         )
+        self.self_attn = apply_module_factory_kwargs(self.self_attn, factory_kwargs)
         self._attention_mask = None
 
     def forward(

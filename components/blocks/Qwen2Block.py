@@ -2,6 +2,7 @@ import torch.nn as nn
 from torch import Tensor
 # from transformers.models.llama.modeling_llama import LlamaConfig, LlamaMLP, LlamaRMSNorm
 from transformers.models.qwen2.modeling_qwen2 import Qwen2Config, Qwen2MLP, Qwen2RMSNorm
+from components._factory import apply_module_factory_kwargs
 from components.registry import Registry
 
 
@@ -45,6 +46,13 @@ class Block(nn.Module):
                 hidden_act=config.input.mlp_act_fn,
             )
         )
+        self.input_layernorm = apply_module_factory_kwargs(
+            self.input_layernorm, factory_kwargs
+        )
+        self.post_attention_layernorm = apply_module_factory_kwargs(
+            self.post_attention_layernorm, factory_kwargs
+        )
+        self.mlp = apply_module_factory_kwargs(self.mlp, factory_kwargs)
 
     def forward(
         self,

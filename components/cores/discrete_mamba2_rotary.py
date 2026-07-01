@@ -28,6 +28,10 @@ except ImportError:
 from einops import repeat
 from functools import partial
 
+from components._repo_path import ensure_repo_root_on_path
+
+ensure_repo_root_on_path()
+
 from utils.init_weights import _init_weights
 
 from utils.config import Config
@@ -369,17 +373,20 @@ class Mixer(nn.Module):
         return states
 
     def convolutional_forward(self, xBC, padded_len):
-        if causal_conv1d_fn is None or self.activation not in [
-            "silu",
-            "swish",
-            "identity",
-        ]:
+        xBC_fast = xBC.transpose(1, 2)
+        fast_conv_supported = (
+            causal_conv1d_fn is not None
+            and self.activation in ["silu", "swish", "identity"]
+            and xBC_fast.stride(0) % 8 == 0
+            and xBC_fast.stride(2) % 8 == 0
+        )
+        if not fast_conv_supported:
             xBC = self.act(
                 self.conv1d(xBC.transpose(1, 2))[..., :padded_len].transpose(1, 2)
             )
         else:
             xBC = causal_conv1d_fn(
-                xBC.transpose(1, 2),
+                xBC_fast,
                 rearrange(self.conv1d.weight, "d 1 w -> d w"),
                 self.conv1d.bias,
                 activation=None if self.activation == "identity" else self.activation,

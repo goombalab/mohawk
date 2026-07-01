@@ -1,6 +1,6 @@
 LOAD:
 - ./configs/Llama/8B/bases/_hstates.yaml
-- ./configs/components/llama.yaml
+- ./configs/Llama/8B/bases/llama.yaml
 
 DistillConfig:
   name: llama

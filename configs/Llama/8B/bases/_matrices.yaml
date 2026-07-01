@@ -1,8 +1,8 @@
-LOAD: 
-- ./configs/Llama/3B/bases/load.yaml
-- ./configs/Llama/3B/bases/teacher.yaml
-- ./configs/Llama/3B/bases/optimizer.yaml
-- ./configs/Llama/3B/bases/train.yaml
+LOAD:
+- ./configs/Llama/8B/bases/load.yaml
+- ./configs/Llama/8B/bases/teacher.yaml
+- ./configs/Llama/8B/bases/optimizer.yaml
+- ./configs/Llama/8B/bases/train.yaml
 - ./configs/management.yaml
 
 DistillConfig:
@@ -24,8 +24,8 @@ TrainDataConfig:
 
 TrainConfig:
   n_tokens: !!float 1e9
-  effective_batch_size: 64  # don't divide by n_gpus
-  mixed_precision: true  
+  effective_batch_size: 64
+  mixed_precision: true
   model_dtype: float32
 
 EvalConfig:
@@ -40,7 +40,7 @@ EvalConfig:
   DataConfig:
     loaders: [JSONIterableDataset, Tokenize, PaddingDataLoader, TorchDataLoader]
     JSONIterableDataset:
-      data_dir: <path-to-fineweb-edu-dataset>  # Replace with your FineWeb-Edu dataset path
+      data_dir: <path-to-fineweb-edu-dataset>
     Tokenize:
       tokenizer: ${TrainConfig.tokenizer}
       collate_type: text

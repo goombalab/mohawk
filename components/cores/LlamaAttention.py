@@ -18,7 +18,12 @@ class Mixer(nn.Module):
 
         # Select the attention class based on the configuration
         self.model_cfg["hidden_size"] = d_model
-        if "_attn_implementation" not in self.model_cfg:
+        # Preserve an explicit architecture choice unless the runtime asks for
+        # a non-default backend (for example eager when flash-attn is absent).
+        if (
+            "_attn_implementation" not in self.model_cfg
+            or attn_implementation != "flash_attention_2"
+        ):
             self.model_cfg["_attn_implementation"] = attn_implementation
         config = LlamaConfig(**self.model_cfg)
         self.layer_idx = layer_idx

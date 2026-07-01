@@ -11,7 +11,7 @@ ComponentsConfig:
   input: {vocab_size: 151936, tie_embeddings: true, pad_vocab_size_multiple: 8, lm_head_bias: false}
   MixerModel:
     name: Qwen2Model
-    input: {d_model: 1536, n_layer: 28, lm_head_prenorm: rms}
+    input: {d_model: 1536, n_layer: 28, lm_head_prenorm: rms, norm_epsilon: !!float 1e-6, max_position_embeddings: 32768, rope_theta: 1000000, head_dim: 128}
     Blocks:
 
     # L0: 1 head -> {11}

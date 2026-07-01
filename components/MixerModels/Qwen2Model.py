@@ -2,13 +2,16 @@ import torch
 import torch.nn as nn
 
 from external_models.modeling_qwen2 import Qwen2RotaryEmbedding, Qwen2RMSNorm, Qwen2Config
+from components._factory import apply_module_factory_kwargs
 from components.registry import Registry
+from components._repo_path import ensure_repo_root_on_path
+
+ensure_repo_root_on_path()
+
 from utils.config import Config
 
 
 class MixerModel(nn.Module):
-    __slots__ = ("embedding", "layers", "norm", "rotary_emb")
-
     def __init__(
         self: nn.Module,
         input_size: int,
@@ -51,6 +54,9 @@ class MixerModel(nn.Module):
         # Final layer norm
         norm_epsilon = self.config.input.norm_epsilon
         self.final_layernorm = Qwen2RMSNorm(hidden_size=d_model, eps=norm_epsilon)
+        self.final_layernorm = apply_module_factory_kwargs(
+            self.final_layernorm, factory_kwargs
+        )
 
         return
 
@@ -122,7 +128,7 @@ class MixerModel(nn.Module):
                 outputs["all_hidden_states"] += (hidden_states,)
             if return_mixer_hidden_states:
                 outputs["all_mixer_outputs"] += (layer_outputs["mixer_hidden_states"],)
-            if return_mixer_matrix:
+            if return_mixer_matrix and "transfer_matrix" in layer_outputs:
                 outputs["all_transfer_matrices"] += (layer_outputs["transfer_matrix"],)
 
         # Last layer, apply layer norm

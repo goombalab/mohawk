@@ -1,0 +1,17 @@
+LOAD:
+  - configs/smoke/tiny_cuda_fsdp_mixed_precision.yaml
+
+ManagementConfig:
+  paths:
+    base_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_default_runtime_mixed_precision
+    save_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_default_runtime_mixed_precision/save
+    tmp_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_default_runtime_mixed_precision/tmp
+  env_vars:
+    WANDB_MODE: disabled
+    WANDB_DIR: /home/abick/mohawk/artifacts/gpu_smoke/wandb
+    TORCH_HOME: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_default_runtime_mixed_precision/torch_home
+    HF_DATASETS_CACHE: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_default_runtime_mixed_precision/huggingface/datasets
+    HF_HUB_CACHE: /home/abick/.cache/huggingface/hub
+
+DistillConfig:
+  name: Tiny-CUDA-FSDP-Default-Runtime-Mixed-Precision-Smoke

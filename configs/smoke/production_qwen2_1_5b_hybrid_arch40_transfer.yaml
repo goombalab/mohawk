@@ -1,0 +1,58 @@
+LOAD:
+  - ./configs/Qwen2/1.5B/hybrid/adapter.yaml
+
+PRODUCTION_NAME: Production-Qwen2.5-1.5B-ARCH40-Fast-Hybrid-Transfer
+RUN_DIR: /home/abick/storage/mohawk/artifacts/production_qwen2_1_5b_arch40_transfer
+QWEN_CACHE: /home/abick/storage/mohawk/qwen2_1_5b_hf_cache_20260630
+
+DistillConfig:
+  name: ${PRODUCTION_NAME}
+  type: supervised
+  temperature: 1.0
+
+TrainConfig:
+  seed: 42
+  activation_checkpointing: false
+  mixed_precision: false
+  compile_model: false
+  model_dtype: bfloat16
+  sharding_strategy: NO_SHARD
+  effective_batch_size: 1
+  n_tokens: 256
+  init_fn: eager
+  tokenizer: Qwen/Qwen2.5-1.5B-Instruct
+  attn_implementation: eager
+
+TeacherConfig:
+  dir: Qwen/Qwen2.5-1.5B-Instruct
+  activation_checkpointing: false
+  mixed_precision: false
+  compile_model: false
+  model_dtype: bfloat16
+  sharding_strategy: NO_SHARD
+  attn_implementation: eager
+
+# tools/hybrid_weights_transfer.py replaces this with its selective teacher
+# preload before constructing the student.
+LoadConfig:
+  model: [null]
+
+ManagementConfig:
+  wandb:
+    mode: disabled
+    save_code: false
+  paths:
+    base_dir: ${RUN_DIR}
+    save_dir: ${RUN_DIR}/save
+    tmp_dir: ${RUN_DIR}/tmp
+  env_vars:
+    WANDB_MODE: disabled
+    WANDB_DIR: /home/abick/storage/mohawk/wandb
+    HF_HUB_CACHE: ${QWEN_CACHE}
+    HF_DATASETS_CACHE: ${QWEN_CACHE}/datasets
+    TORCH_HOME: /home/abick/storage/mohawk/torch_home
+    TRITON_CACHE_DIR: /home/abick/storage/mohawk/tmp/triton-production-qwen2
+    XDG_CACHE_HOME: /home/abick/storage/mohawk/tmp/xdg-production-qwen2
+    LOGURU_LEVEL: INFO
+
+EvalConfig: null

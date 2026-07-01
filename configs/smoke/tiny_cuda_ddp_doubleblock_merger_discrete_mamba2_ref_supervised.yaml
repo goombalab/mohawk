@@ -1,0 +1,17 @@
+LOAD:
+  - ./configs/smoke/tiny_cuda_doubleblock_merger_discrete_mamba2_ref_supervised.yaml
+
+SMOKE_NAME: Tiny-CUDA-DDP-DoubleBlockMerger-DiscreteMamba2-Ref-Smoke
+RUN_DIR: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_ddp_doubleblock_merger_discrete_mamba2_ref
+
+TrainConfig:
+  wrapper_type: ddp
+  effective_batch_size: 2
+  n_tokens: 32
+
+TeacherConfig:
+  wrapper_type: ddp
+
+TrainDataConfig:
+  JSONIterableDataset:
+    data_dir: configs/smoke/data_ddp

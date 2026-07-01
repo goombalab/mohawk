@@ -1,0 +1,38 @@
+LOAD:
+  - configs/smoke/tiny_cpu_supervised.yaml
+
+ManagementConfig:
+  paths:
+    base_dir: /home/abick/storage/mohawk/fineweb_edu_streaming_smoke
+    save_dir: /home/abick/storage/mohawk/fineweb_edu_streaming_smoke/save
+    tmp_dir: /home/abick/storage/mohawk/fineweb_edu_streaming_smoke/tmp
+  env_vars:
+    WANDB_MODE: disabled
+    WANDB_DIR: /home/abick/storage/mohawk/fineweb_edu_streaming_smoke/wandb
+    TORCH_HOME: /home/abick/storage/mohawk/fineweb_edu_streaming_smoke/torch_home
+    HF_DATASETS_CACHE: /home/abick/storage/mohawk/fineweb_edu_streaming_smoke/huggingface/datasets
+    HF_HUB_CACHE: /home/abick/storage/mohawk/fineweb_edu_streaming_smoke/huggingface/hub
+    HF_TOKEN: ""
+    LOGURU_LEVEL: DEBUG
+
+DistillConfig:
+  name: Tiny-CPU-FineWeb-Edu-Streaming-Supervised-Smoke
+
+TrainDataConfig:
+  loaders: [null, HFDataset, Tokenize, PaddingDataLoader, CycleDataLoader, TorchDataLoader]
+  HFDataset:
+    path: HuggingFaceFW/fineweb-edu
+    name: sample-100BT
+    split: train
+    streaming: true
+    shuffle_buffer_size: 2
+  Tokenize:
+    tokenizer: sshleifer/tiny-gpt2
+    collate_type: text
+    local_files_only: true
+  PaddingDataLoader:
+    max_seq_len: 8
+  CycleDataLoader: {}
+  TorchDataLoader:
+    batch_size: 1
+    num_workers: 0

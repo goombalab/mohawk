@@ -1,0 +1,18 @@
+LOAD:
+  - ./configs/smoke/tiny_cuda_fsdp_doubleblock_discrete_mamba2_fast_supervised.yaml
+
+SMOKE_NAME: Tiny-CUDA-FSDP-Multinode-DoubleBlockAdapter-DiscreteMamba2-Fast-Smoke
+RUN_DIR: /home/abick/storage/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_multinode_doubleblock_discrete_mamba2_fast
+
+ManagementConfig:
+  env_vars:
+    TRITON_CACHE_DIR: /home/abick/storage/mohawk/tmp/triton-discrete-mamba2-fast-ddp-multinode
+    XDG_CACHE_HOME: /home/abick/storage/mohawk/tmp/xdg-discrete-mamba2-fast-ddp-multinode
+
+TrainConfig:
+  effective_batch_size: 8
+  n_tokens: 128
+
+TrainDataConfig:
+  JSONIterableDataset:
+    data_dir: configs/smoke/data_ddp_multinode

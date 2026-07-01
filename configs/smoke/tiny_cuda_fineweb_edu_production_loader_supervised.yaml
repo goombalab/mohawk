@@ -1,0 +1,48 @@
+LOAD:
+  - configs/smoke/tiny_cuda_supervised.yaml
+
+ManagementConfig:
+  paths:
+    base_dir: /home/abick/storage/mohawk/fineweb_edu_production_loader_cuda
+    save_dir: /home/abick/storage/mohawk/fineweb_edu_production_loader_cuda/save
+    tmp_dir: /home/abick/storage/mohawk/fineweb_edu_production_loader_cuda/tmp
+  env_vars:
+    WANDB_MODE: disabled
+    WANDB_DIR: /home/abick/storage/mohawk/fineweb_edu_production_loader_cuda/wandb
+    TORCH_HOME: /home/abick/storage/mohawk/fineweb_edu_production_loader_cuda/torch_home
+    HF_DATASETS_CACHE: /home/abick/storage/mohawk/fineweb_edu_streaming_smoke_default_runtime/huggingface/datasets
+    HF_HUB_CACHE: /home/abick/storage/.cache/huggingface/hub
+    XDG_CACHE_HOME: /home/abick/storage/mohawk/cache/xdg
+    TRITON_CACHE_DIR: /home/abick/storage/mohawk/cache/triton
+    WANDB_DISABLED: "true"
+
+DistillConfig:
+  name: Tiny-CUDA-FineWeb-Edu-Production-Loader-Supervised-Smoke
+
+ComponentsConfig:
+  MixerModel:
+    input:
+      max_position_embeddings: 2048
+
+TrainConfig:
+  n_tokens: 4096
+
+TeacherConfig:
+  dir: /home/abick/storage/mohawk/artifacts/gpu_smoke/tiny_cuda_teacher_ckpt
+
+TrainDataConfig:
+  loaders: [null, HFDataset, Tokenize, PackingDataLoader, TorchDataLoader]
+  HFDataset:
+    path: HuggingFaceFW/fineweb-edu
+    name: sample-100BT
+    split: train
+    streaming: true
+  Tokenize:
+    tokenizer: sshleifer/tiny-gpt2
+    collate_type: text
+    local_files_only: true
+  PackingDataLoader:
+    max_seq_len: 2048
+  TorchDataLoader:
+    batch_size: 1
+    num_workers: 0

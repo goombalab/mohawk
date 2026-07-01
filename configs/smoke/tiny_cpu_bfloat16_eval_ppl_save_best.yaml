@@ -1,0 +1,38 @@
+LOAD:
+  - configs/smoke/tiny_cpu_bfloat16_eval_ppl.yaml
+
+ManagementConfig:
+  paths:
+    base_dir: /tmp/mohawk_tiny_bfloat16_eval_ppl_save_best_cpu_run
+    save_dir: /tmp/mohawk_tiny_bfloat16_eval_ppl_save_best_cpu_run/save
+    tmp_dir: /tmp/mohawk_tiny_bfloat16_eval_ppl_save_best_cpu_run/tmp
+  env_vars:
+    TORCH_HOME: /tmp/mohawk_tiny_bfloat16_eval_ppl_save_best_cpu_run/torch_home
+    HF_DATASETS_CACHE: /tmp/mohawk_tiny_bfloat16_eval_ppl_save_best_cpu_run/huggingface/datasets
+    HF_HUB_CACHE: /tmp/mohawk_tiny_bfloat16_eval_ppl_save_best_cpu_run/huggingface/hub
+
+DistillConfig:
+  name: Tiny-CPU-BFloat16-Eval-PPL-SaveBest-Smoke
+
+EvalConfig:
+  - null
+  - Evaluation: eval_ppl
+    frequency: .inf
+    eval_at_start: false
+    eval_at_end: true
+    save_best: true
+    save_latest: false
+    n_batches: 1
+    DataConfig:
+      loaders: [JSONIterableDataset, Tokenize, PaddingDataLoader, TorchDataLoader]
+      JSONIterableDataset:
+        data_dir: configs/smoke/data
+      Tokenize:
+        tokenizer: sshleifer/tiny-gpt2
+        collate_type: text
+        local_files_only: true
+      PaddingDataLoader:
+        max_seq_len: 8
+      TorchDataLoader:
+        batch_size: 1
+        num_workers: 0

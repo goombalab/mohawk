@@ -1,0 +1,46 @@
+LOAD:
+  - ./configs/smoke/production_qwen2_1_5b_hybrid_arch40_transfer.yaml
+
+PRODUCTION_NAME: Production-Qwen2.5-1.5B-ARCH40-Fast-Hybrid-Supervised
+RUN_DIR: /home/abick/storage/mohawk/artifacts/production_qwen2_1_5b_arch40_supervised
+TRANSFER_CHECKPOINT: /home/abick/storage/mohawk/artifacts/production_qwen2_1_5b_arch40_transfer/save
+
+LoadConfig:
+  model:
+    - null
+    - path: ${TRANSFER_CHECKPOINT}
+      allow_missing_keys: false
+      allow_unexpected_keys: false
+
+OptimizerConfig:
+  optimizer: AdamW
+  lr: 1.0e-5
+  betas: [null, 0.9, 0.95]
+  eps: 1.0e-8
+  weight_decay: 0.0
+  optimize_weights:
+    black_list: null
+    white_list: null
+  scheduler:
+    name: constant
+    warmup_steps: 0
+    decay_steps: 0
+    warmup_start_lr: 0.0
+    min_lr: 0.0
+
+TrainDataConfig:
+  loaders: [null, JSONIterableDataset, Tokenize, PaddingDataLoader, CycleDataLoader, TorchDataLoader]
+  JSONIterableDataset:
+    data_dir: configs/smoke/data
+  Tokenize:
+    tokenizer: Qwen/Qwen2.5-1.5B-Instruct
+    collate_type: text
+    local_files_only: true
+  PaddingDataLoader:
+    max_seq_len: 128
+  CycleDataLoader: {}
+  TorchDataLoader:
+    batch_size: 1
+    num_workers: 0
+
+EvalConfig: null

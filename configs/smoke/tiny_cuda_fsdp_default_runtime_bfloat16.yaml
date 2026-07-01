@@ -1,0 +1,17 @@
+LOAD:
+  - configs/smoke/tiny_cuda_fsdp_bfloat16_supervised.yaml
+
+ManagementConfig:
+  paths:
+    base_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_default_runtime_bfloat16
+    save_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_default_runtime_bfloat16/save
+    tmp_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_default_runtime_bfloat16/tmp
+  env_vars:
+    WANDB_MODE: disabled
+    WANDB_DIR: /home/abick/mohawk/artifacts/gpu_smoke/wandb
+    TORCH_HOME: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_default_runtime_bfloat16/torch_home
+    HF_DATASETS_CACHE: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_default_runtime_bfloat16/huggingface/datasets
+    HF_HUB_CACHE: /home/abick/.cache/huggingface/hub
+
+DistillConfig:
+  name: Tiny-CUDA-FSDP-Default-Runtime-BFloat16-Smoke

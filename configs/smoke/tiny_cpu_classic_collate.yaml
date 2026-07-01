@@ -1,0 +1,23 @@
+LOAD:
+  - configs/smoke/tiny_cpu_supervised.yaml
+
+ManagementConfig:
+  paths:
+    base_dir: /tmp/mohawk_tiny_classic_collate_cpu_run
+    save_dir: /tmp/mohawk_tiny_classic_collate_cpu_run/save
+    tmp_dir: /tmp/mohawk_tiny_classic_collate_cpu_run/tmp
+  env_vars:
+    TORCH_HOME: /tmp/mohawk_tiny_classic_collate_cpu_run/torch_home
+    HF_DATASETS_CACHE: /tmp/mohawk_tiny_classic_collate_cpu_run/huggingface/datasets
+    HF_HUB_CACHE: /tmp/mohawk_tiny_classic_collate_cpu_run/huggingface/hub
+
+DistillConfig:
+  name: Tiny-CPU-Classic-Collate-Smoke
+
+TrainDataConfig:
+  JSONIterableDataset:
+    data_dir: configs/smoke/data_classic
+  Tokenize:
+    tokenizer: sshleifer/tiny-gpt2
+    collate_type: classic
+    local_files_only: true

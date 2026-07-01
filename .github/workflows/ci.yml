@@ -1,0 +1,24 @@
+name: CPU-safe validation
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  cpu-safe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install lightweight validation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest PyYAML
+      - name: Scope note
+        run: echo "CPU-safe baseline only; full GPU/distributed/research validation is resource-gated."
+      - name: Compile Python sources
+        run: python3 -m compileall -q .
+      - name: Run CPU-safe tests
+        run: pytest -q

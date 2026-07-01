@@ -1,0 +1,113 @@
+ManagementConfig:
+  wandb:
+    project: "mohawk"
+    entity: "your-wandb-entity"
+    save_code: false
+    mode: disabled
+  paths:
+    base_dir: /tmp/mohawk_tiny_falcon_cpu_run
+    save_dir: /tmp/mohawk_tiny_falcon_cpu_run/save
+    tmp_dir: /tmp/mohawk_tiny_falcon_cpu_run/tmp
+  env_vars:
+    WANDB_MODE: disabled
+    WANDB_DIR: /tmp/wandb
+    TORCH_HOME: /tmp/mohawk_tiny_falcon_cpu_run/torch_home
+    HF_DATASETS_CACHE: /tmp/mohawk_tiny_falcon_cpu_run/huggingface/datasets
+    HF_HUB_CACHE: /tmp/mohawk_tiny_falcon_cpu_run/huggingface/hub
+    HF_TOKEN: ""
+    LOGURU_LEVEL: DEBUG
+    NCCL_DEBUG: INFO
+
+DistillConfig:
+  name: Tiny-CPU-Falcon-Supervised-Smoke
+  type: supervised
+  temperature: 1.0
+
+ComponentsConfig:
+  name: LayeredMambaLM
+  input:
+    vocab_size: 50257
+    pad_vocab_size_multiple: 1
+    tie_embeddings: false
+    lm_head_bias: false
+  MixerModel:
+    name: LlamaModel
+    input:
+      input_size: 50257
+      n_layer: 1
+      d_model: 16
+      norm_epsilon: 1.0e-5
+      num_attention_heads: 2
+      num_key_value_heads: 2
+      head_dim: 8
+      max_position_embeddings: 32
+      rope_theta: 10000.0
+      attention_bias: false
+      attention_dropout: 0.0
+      _attn_implementation: eager
+    Blocks:
+      - name: FalconBlock
+        n_layers: 1
+        input:
+          resid_dropout: 0.0
+        Layer:
+          name: FalconMambaMixer
+          input:
+            state_size: 4
+            conv_kernel: 4
+            expand: 1
+
+TrainConfig:
+  seed: 0
+  activation_checkpointing: false
+  mixed_precision: false
+  compile_model: false
+  model_dtype: float32
+  sharding_strategy: NO_SHARD
+  effective_batch_size: 1
+  n_tokens: 16
+  init_fn: eager
+  tokenizer: sshleifer/tiny-gpt2
+
+TeacherConfig:
+  dir: /tmp/mohawk_tiny_falcon_teacher_ckpt
+  activation_checkpointing: false
+  mixed_precision: false
+  compile_model: false
+  model_dtype: float32
+  sharding_strategy: NO_SHARD
+
+LoadConfig: {}
+
+OptimizerConfig:
+  optimizer: AdamW
+  lr: 1.0e-4
+  betas: [0.9, 0.95]
+  eps: 1.0e-8
+  weight_decay: 0.0
+  optimize_weights:
+    black_list: null
+    white_list: null
+  scheduler:
+    name: constant
+    warmup_steps: 0
+    decay_steps: 0
+    warmup_start_lr: 0.0
+    min_lr: 0.0
+
+TrainDataConfig:
+  loaders: [JSONIterableDataset, Tokenize, PaddingDataLoader, CycleDataLoader, TorchDataLoader]
+  JSONIterableDataset:
+    data_dir: configs/smoke/data
+  Tokenize:
+    tokenizer: sshleifer/tiny-gpt2
+    collate_type: text
+    local_files_only: true
+  PaddingDataLoader:
+    max_seq_len: 8
+  CycleDataLoader: {}
+  TorchDataLoader:
+    batch_size: 1
+    num_workers: 0
+
+EvalConfig: null

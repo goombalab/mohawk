@@ -1,0 +1,17 @@
+LOAD:
+  - configs/smoke/tiny_cuda_ddp_multinode_mixed_precision_gradient_accumulation.yaml
+
+ManagementConfig:
+  paths:
+    base_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_ddp_default_runtime_multinode_mixed_precision_gradient_accumulation
+    save_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_ddp_default_runtime_multinode_mixed_precision_gradient_accumulation/save
+    tmp_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_ddp_default_runtime_multinode_mixed_precision_gradient_accumulation/tmp
+  env_vars:
+    WANDB_MODE: disabled
+    WANDB_DIR: /home/abick/mohawk/artifacts/gpu_smoke/wandb
+    TORCH_HOME: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_ddp_default_runtime_multinode_mixed_precision_gradient_accumulation/torch_home
+    HF_DATASETS_CACHE: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_ddp_default_runtime_multinode_mixed_precision_gradient_accumulation/huggingface/datasets
+    HF_HUB_CACHE: /home/abick/.cache/huggingface/hub
+
+DistillConfig:
+  name: Tiny-CUDA-DDP-Default-Runtime-Multinode-Mixed-Precision-Gradient-Accumulation-Smoke

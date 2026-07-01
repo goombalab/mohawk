@@ -1,0 +1,21 @@
+LOAD:
+  - configs/smoke/tiny_cpu_bfloat16_mixed_precision_fallback.yaml
+
+ManagementConfig:
+  paths:
+    base_dir: /tmp/mohawk_tiny_bfloat16_teacher_compile_model_cpu_run
+    save_dir: /tmp/mohawk_tiny_bfloat16_teacher_compile_model_cpu_run/save
+    tmp_dir: /tmp/mohawk_tiny_bfloat16_teacher_compile_model_cpu_run/tmp
+  env_vars:
+    TORCH_HOME: /tmp/mohawk_tiny_bfloat16_teacher_compile_model_cpu_run/torch_home
+    HF_DATASETS_CACHE: /tmp/mohawk_tiny_bfloat16_teacher_compile_model_cpu_run/huggingface/datasets
+    HF_HUB_CACHE: /tmp/mohawk_tiny_bfloat16_teacher_compile_model_cpu_run/huggingface/hub
+
+DistillConfig:
+  name: Tiny-CPU-BFloat16-Teacher-Compile-Model-Smoke
+
+TrainConfig:
+  compile_model: false
+
+TeacherConfig:
+  compile_model: true

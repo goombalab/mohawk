@@ -1,0 +1,25 @@
+LOAD:
+  - configs/smoke/tiny_cpu_fineweb_edu_streaming_supervised.yaml
+
+ManagementConfig:
+  paths:
+    base_dir: /home/abick/storage/mohawk/fineweb_edu_streaming_smoke_default_runtime
+    save_dir: /home/abick/storage/mohawk/fineweb_edu_streaming_smoke_default_runtime/save
+    tmp_dir: /home/abick/storage/mohawk/fineweb_edu_streaming_smoke_default_runtime/tmp
+  env_vars:
+    WANDB_MODE: disabled
+    WANDB_DIR: /home/abick/storage/mohawk/fineweb_edu_streaming_smoke_default_runtime/wandb
+    TORCH_HOME: /home/abick/storage/mohawk/fineweb_edu_streaming_smoke_default_runtime/torch_home
+    HF_DATASETS_CACHE: /home/abick/storage/mohawk/fineweb_edu_streaming_smoke_default_runtime/huggingface/datasets
+    HF_HUB_CACHE: /home/abick/storage/mohawk/fineweb_edu_streaming_smoke_default_runtime/huggingface/hub
+    HF_TOKEN: ""
+    LOGURU_LEVEL: DEBUG
+
+DistillConfig:
+  name: Tiny-CPU-FineWeb-Edu-Streaming-Default-Runtime-Supervised-Smoke
+
+TrainDataConfig:
+  Tokenize:
+    tokenizer: sshleifer/tiny-gpt2
+    collate_type: text
+    local_files_only: false

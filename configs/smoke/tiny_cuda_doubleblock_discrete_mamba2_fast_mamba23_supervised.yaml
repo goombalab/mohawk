@@ -1,0 +1,10 @@
+LOAD:
+  - ./configs/smoke/tiny_cuda_doubleblock_discrete_mamba2_fast_supervised.yaml
+
+SMOKE_NAME: Tiny-CUDA-DoubleBlockAdapter-DiscreteMamba2-Fast-Mamba23-Smoke
+RUN_DIR: /home/abick/storage/mohawk/artifacts/gpu_smoke/tiny_cuda_doubleblock_discrete_mamba2_fast_mamba23
+
+ManagementConfig:
+  env_vars:
+    TRITON_CACHE_DIR: /home/abick/storage/mohawk/tmp/triton-mamba23-fast-smoke
+    XDG_CACHE_HOME: /home/abick/storage/mohawk/tmp/xdg-mamba23-fast-smoke

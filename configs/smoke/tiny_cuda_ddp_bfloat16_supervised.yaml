@@ -1,0 +1,25 @@
+LOAD:
+  - configs/smoke/tiny_cuda_ddp_supervised.yaml
+
+ManagementConfig:
+  paths:
+    base_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_ddp_bfloat16_supervised
+    save_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_ddp_bfloat16_supervised/save
+    tmp_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_ddp_bfloat16_supervised/tmp
+  env_vars:
+    WANDB_MODE: disabled
+    WANDB_DIR: /home/abick/mohawk/artifacts/gpu_smoke/wandb
+    TORCH_HOME: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_ddp_bfloat16_supervised/torch_home
+    HF_DATASETS_CACHE: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_ddp_bfloat16_supervised/huggingface/datasets
+    HF_HUB_CACHE: /home/abick/.cache/huggingface/hub
+
+DistillConfig:
+  name: Tiny-CUDA-DDP-BFloat16-Supervised-Smoke
+
+TrainConfig:
+  mixed_precision: true
+  model_dtype: bfloat16
+
+TeacherConfig:
+  mixed_precision: true
+  model_dtype: bfloat16

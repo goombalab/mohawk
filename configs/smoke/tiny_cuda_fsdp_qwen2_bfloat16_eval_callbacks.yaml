@@ -1,0 +1,25 @@
+LOAD:
+  - configs/smoke/tiny_cuda_ddp_qwen2_bfloat16_eval_callbacks.yaml
+
+ManagementConfig:
+  paths:
+    base_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_qwen2_bfloat16_eval_callbacks
+    save_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_qwen2_bfloat16_eval_callbacks/save
+    tmp_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_qwen2_bfloat16_eval_callbacks/tmp
+  env_vars:
+    WANDB_MODE: disabled
+    WANDB_DIR: /home/abick/mohawk/artifacts/gpu_smoke/wandb
+    TORCH_HOME: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_qwen2_bfloat16_eval_callbacks/torch_home
+    HF_DATASETS_CACHE: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_qwen2_bfloat16_eval_callbacks/huggingface/datasets
+    HF_HUB_CACHE: /home/abick/.cache/huggingface/hub
+
+DistillConfig:
+  name: Tiny-CUDA-FSDP-Qwen2-BFloat16-Eval-Callbacks-Smoke
+
+TrainConfig:
+  wrapper_type: fsdp
+  sharding_strategy: FULL_SHARD
+
+TeacherConfig:
+  wrapper_type: fsdp
+  sharding_strategy: FULL_SHARD

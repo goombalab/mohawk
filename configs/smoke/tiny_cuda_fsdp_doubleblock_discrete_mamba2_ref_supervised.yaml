@@ -1,0 +1,13 @@
+LOAD:
+  - ./configs/smoke/tiny_cuda_ddp_doubleblock_discrete_mamba2_ref_supervised.yaml
+
+SMOKE_NAME: Tiny-CUDA-FSDP-DoubleBlockAdapter-DiscreteMamba2-Ref-Smoke
+RUN_DIR: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_doubleblock_discrete_mamba2_ref
+
+TrainConfig:
+  wrapper_type: fsdp
+  sharding_strategy: FULL_SHARD
+
+TeacherConfig:
+  wrapper_type: fsdp
+  sharding_strategy: FULL_SHARD

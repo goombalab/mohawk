@@ -1,0 +1,35 @@
+LOAD:
+  - configs/smoke/tiny_cpu_supervised.yaml
+
+ManagementConfig:
+  paths:
+    base_dir: /tmp/mohawk_tiny_dpo_cpu_run
+    save_dir: /tmp/mohawk_tiny_dpo_cpu_run/save
+    tmp_dir: /tmp/mohawk_tiny_dpo_cpu_run/tmp
+  env_vars:
+    TORCH_HOME: /tmp/mohawk_tiny_dpo_cpu_run/torch_home
+    HF_DATASETS_CACHE: /tmp/mohawk_tiny_dpo_cpu_run/huggingface/datasets
+    HF_HUB_CACHE: /tmp/mohawk_tiny_dpo_cpu_run/huggingface/hub
+
+DistillConfig:
+  name: Tiny-CPU-DPO-Smoke
+  type: dpo
+  beta: 0.1
+
+TeacherConfig:
+  dir: /tmp/mohawk_tiny_dpo_teacher_ckpt
+
+TrainDataConfig:
+  loaders: [null, JSONIterableDataset, Tokenize, PaddingDataLoader, CycleDataLoader, TorchDataLoader]
+  JSONIterableDataset:
+    data_dir: configs/smoke/data_dpo
+  Tokenize:
+    tokenizer: sshleifer/tiny-gpt2
+    collate_type: preference
+    local_files_only: true
+  PaddingDataLoader:
+    max_seq_len: 8
+  CycleDataLoader: {}
+  TorchDataLoader:
+    batch_size: 1
+    num_workers: 0

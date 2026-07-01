@@ -1,0 +1,25 @@
+LOAD:
+  - configs/smoke/tiny_cuda_mixed_precision.yaml
+
+ManagementConfig:
+  paths:
+    base_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_mixed_precision_resume
+    save_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_mixed_precision_resume/save
+    tmp_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_mixed_precision_resume/tmp
+  env_vars:
+    TORCH_HOME: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_mixed_precision_resume/torch_home
+    HF_DATASETS_CACHE: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_mixed_precision_resume/huggingface/datasets
+
+DistillConfig:
+  name: Tiny-CUDA-Mixed-Precision-Resume-Smoke
+
+TrainConfig:
+  n_tokens: 32
+
+LoadConfig:
+  model:
+    - path: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_mixed_precision/save
+  optimizer:
+    path: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_mixed_precision/save
+  scheduler:
+    path: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_mixed_precision/save

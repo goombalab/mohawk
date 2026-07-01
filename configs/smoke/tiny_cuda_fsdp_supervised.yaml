@@ -1,0 +1,22 @@
+LOAD:
+  - configs/smoke/tiny_cuda_ddp_supervised.yaml
+
+ManagementConfig:
+  paths:
+    base_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_supervised
+    save_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_supervised/save
+    tmp_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_supervised/tmp
+  env_vars:
+    TORCH_HOME: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_supervised/torch_home
+    HF_DATASETS_CACHE: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_supervised/huggingface/datasets
+
+DistillConfig:
+  name: Tiny-CUDA-FSDP-Supervised-Smoke
+
+TrainConfig:
+  wrapper_type: fsdp
+  sharding_strategy: FULL_SHARD
+
+TeacherConfig:
+  wrapper_type: fsdp
+  sharding_strategy: FULL_SHARD

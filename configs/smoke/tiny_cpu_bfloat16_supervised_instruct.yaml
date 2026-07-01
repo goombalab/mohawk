@@ -1,0 +1,23 @@
+LOAD:
+  - configs/smoke/tiny_cpu_supervised_instruct.yaml
+
+ManagementConfig:
+  paths:
+    base_dir: /tmp/mohawk_tiny_bfloat16_supervised_instruct_cpu_run
+    save_dir: /tmp/mohawk_tiny_bfloat16_supervised_instruct_cpu_run/save
+    tmp_dir: /tmp/mohawk_tiny_bfloat16_supervised_instruct_cpu_run/tmp
+  env_vars:
+    TORCH_HOME: /tmp/mohawk_tiny_bfloat16_supervised_instruct_cpu_run/torch_home
+    HF_DATASETS_CACHE: /tmp/mohawk_tiny_bfloat16_supervised_instruct_cpu_run/huggingface/datasets
+    HF_HUB_CACHE: /tmp/mohawk_tiny_bfloat16_supervised_instruct_cpu_run/huggingface/hub
+
+DistillConfig:
+  name: Tiny-CPU-BFloat16-Supervised-Instruct-Smoke
+
+TrainConfig:
+  mixed_precision: true
+  model_dtype: bfloat16
+
+TeacherConfig:
+  mixed_precision: true
+  model_dtype: bfloat16

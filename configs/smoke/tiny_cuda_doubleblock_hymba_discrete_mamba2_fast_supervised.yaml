@@ -1,0 +1,12 @@
+LOAD:
+  - ./configs/smoke/tiny_cuda_doubleblock_hymba_discrete_mamba2_ref_supervised.yaml
+
+SMOKE_NAME: Tiny-CUDA-DoubleBlockHymba-DiscreteMamba2-Fast-Smoke
+USE_REF_IMPL: false
+RUN_DIR: /home/abick/storage/mohawk/artifacts/gpu_smoke/tiny_cuda_doubleblock_hymba_discrete_mamba2_fast
+TEACHER_DIR: /home/abick/storage/mohawk/artifacts/gpu_smoke/doubleblock_ref_checkpoints/hymba
+
+ManagementConfig:
+  env_vars:
+    TRITON_CACHE_DIR: /home/abick/storage/mohawk/tmp/triton-discrete-mamba2-fast-hymba
+    XDG_CACHE_HOME: /home/abick/storage/mohawk/tmp/xdg-discrete-mamba2-fast-hymba

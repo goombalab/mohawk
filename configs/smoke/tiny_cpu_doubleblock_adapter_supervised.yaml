@@ -1,0 +1,7 @@
+LOAD:
+  - ./configs/smoke/tiny_cpu_doubleblock_attention_base.yaml
+
+SMOKE_NAME: Tiny-CPU-DoubleBlockAdapter-Attention-Smoke
+BLOCK_NAME: DoubleBlockAdapter
+RUN_DIR: /tmp/mohawk_tiny_doubleblock_adapter_cpu_run
+TEACHER_DIR: /tmp/mohawk_tiny_doubleblock_adapter_teacher_ckpt

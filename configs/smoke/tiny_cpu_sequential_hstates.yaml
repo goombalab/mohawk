@@ -1,0 +1,20 @@
+LOAD:
+  - configs/smoke/tiny_cpu_supervised.yaml
+
+ManagementConfig:
+  paths:
+    base_dir: /tmp/mohawk_tiny_sequential_hstates_cpu_run
+    save_dir: /tmp/mohawk_tiny_sequential_hstates_cpu_run/save
+    tmp_dir: /tmp/mohawk_tiny_sequential_hstates_cpu_run/tmp
+  env_vars:
+    TORCH_HOME: /tmp/mohawk_tiny_sequential_hstates_cpu_run/torch_home
+    HF_DATASETS_CACHE: /tmp/mohawk_tiny_sequential_hstates_cpu_run/huggingface/datasets
+    HF_HUB_CACHE: /tmp/mohawk_tiny_sequential_hstates_cpu_run/huggingface/hub
+
+DistillConfig:
+  name: Tiny-CPU-Sequential-HStates-Smoke
+  type: sequential_hstates
+  hstates_gap: 1
+
+TeacherConfig:
+  dir: /tmp/mohawk_tiny_sequential_hstates_teacher_ckpt

@@ -1,0 +1,20 @@
+LOAD:
+  - configs/smoke/tiny_cuda_fsdp_supervised.yaml
+
+ManagementConfig:
+  paths:
+    base_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_mixed_precision
+    save_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_mixed_precision/save
+    tmp_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_mixed_precision/tmp
+  env_vars:
+    TORCH_HOME: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_mixed_precision/torch_home
+    HF_DATASETS_CACHE: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_mixed_precision/huggingface/datasets
+
+DistillConfig:
+  name: Tiny-CUDA-FSDP-Mixed-Precision-Smoke
+
+TrainConfig:
+  mixed_precision: true
+
+TeacherConfig:
+  mixed_precision: true

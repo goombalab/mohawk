@@ -1,0 +1,22 @@
+LOAD:
+  - configs/smoke/tiny_cuda_fineweb_edu_production_loader_supervised.yaml
+
+ManagementConfig:
+  paths:
+    base_dir: /home/abick/storage/mohawk/fineweb_edu_production_loader_cuda_ddp
+    save_dir: /home/abick/storage/mohawk/fineweb_edu_production_loader_cuda_ddp/save
+    tmp_dir: /home/abick/storage/mohawk/fineweb_edu_production_loader_cuda_ddp/tmp
+  env_vars:
+    WANDB_DIR: /home/abick/storage/mohawk/fineweb_edu_production_loader_cuda_ddp/wandb
+    TORCH_HOME: /home/abick/storage/mohawk/fineweb_edu_production_loader_cuda_ddp/torch_home
+
+DistillConfig:
+  name: Tiny-CUDA-DDP-FineWeb-Edu-Production-Loader-Supervised-Smoke
+
+TrainConfig:
+  wrapper_type: ddp
+  effective_batch_size: 2
+  n_tokens: 8192
+
+TeacherConfig:
+  wrapper_type: ddp

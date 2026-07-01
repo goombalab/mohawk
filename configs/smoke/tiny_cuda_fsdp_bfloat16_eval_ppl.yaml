@@ -1,0 +1,38 @@
+LOAD:
+  - configs/smoke/tiny_cuda_fsdp_bfloat16_supervised.yaml
+
+ManagementConfig:
+  paths:
+    base_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_bfloat16_eval_ppl
+    save_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_bfloat16_eval_ppl/save
+    tmp_dir: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_bfloat16_eval_ppl/tmp
+  env_vars:
+    WANDB_MODE: disabled
+    WANDB_DIR: /home/abick/mohawk/artifacts/gpu_smoke/wandb
+    TORCH_HOME: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_bfloat16_eval_ppl/torch_home
+    HF_DATASETS_CACHE: /home/abick/mohawk/artifacts/gpu_smoke/tiny_cuda_fsdp_bfloat16_eval_ppl/huggingface/datasets
+    HF_HUB_CACHE: /home/abick/.cache/huggingface/hub
+
+DistillConfig:
+  name: Tiny-CUDA-FSDP-BFloat16-Eval-PPL-Smoke
+
+EvalConfig:
+  - Evaluation: eval_ppl
+    frequency: .inf
+    eval_at_start: true
+    eval_at_end: true
+    save_latest: true
+    n_batches: 1
+    DataConfig:
+      loaders: [JSONIterableDataset, Tokenize, PaddingDataLoader, TorchDataLoader]
+      JSONIterableDataset:
+        data_dir: configs/smoke/data_ddp
+      Tokenize:
+        tokenizer: sshleifer/tiny-gpt2
+        collate_type: text
+        local_files_only: true
+      PaddingDataLoader:
+        max_seq_len: 8
+      TorchDataLoader:
+        batch_size: 1
+        num_workers: 0

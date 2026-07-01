@@ -1,8 +1,10 @@
 import random
+import os
 
 import numpy
 import torch
 from huggingface_hub import HfApi
+from huggingface_hub.utils import validate_repo_id
 from contextlib import contextmanager
 
 import time
@@ -76,14 +78,16 @@ def is_valid_hf_model_name(model_name: str) -> bool:
     model_name = "bert-base-uncased"
     assert is_valid_model_name(model_name), f"{model_name} is not a valid Hugging Face model name."
     """
-    # try:
-    #     # Try to retrieve model details
-    #     HfApi().model_info(model_name)
-    #     return True  # If no error occurs, the model name is valid
-    # except Exception as e:
-    #     logger.warning(f"[IS_VALID_HF_MODEL_NAME] Error: \n{e}\n The model name is not valid.")
-    #     return False  # If an error occurs, the model name is not valid
-    logger.warning(f"[IS_VALID_HF_MODEL_NAME] A temporary fix for the Hugging Face model name validation.")
+    if not isinstance(model_name, str) or not model_name:
+        return False
+    if model_name.startswith(("/", "./", "../", "~")):
+        return False
+    if os.path.exists(model_name):
+        return False
+    try:
+        validate_repo_id(model_name)
+    except Exception:
+        return False
     return True
 
 

@@ -1,13 +1,14 @@
+# Default runtime and evaluation dependencies.
+#
+# This manifest intentionally excludes CUDA-built SSM kernels. Install
+# requirements-ssm-cuda.txt only on CUDA-devel hosts that can compile or fetch
+# compatible mamba-ssm / causal-conv1d wheels.
+
 # Core PyTorch and ML libraries
 torch>=2.1.0
-transformers>=4.55.0
+transformers>=4.55.0,<4.56
 accelerate>=1.6.0
 safetensors>=0.5.3
-
-# Mamba SSM (core dependency)
-# Note: mamba-ssm provides both 'mamba_ssm' and 'Mamba' modules
-mamba-ssm>=2.2.5
-causal-conv1d @ git+https://github.com/Dao-AILab/causal-conv1d.git@3db8befd65b7ceb954a414d29ecb6f636b224af4
 
 # Tensor operations and utilities
 einops>=0.7.0
@@ -24,7 +25,7 @@ loguru>=0.7.0
 wandb>=0.16.0
 
 # Evaluation
-lm_eval @ git+https://github.com/EleutherAI/lm-evaluation-harness.git@967eb4fa90b80ba4e8cc7a2fd171f44f0e384808
+lm_eval==0.4.11
 pandas>=2.2.0
 
 # Learning rate scheduler

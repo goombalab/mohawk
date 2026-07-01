@@ -1,0 +1,7 @@
+# Minimal dependencies for CPU-safe checkout validation.
+#
+# This does not install PyTorch, Hugging Face runtimes, SSM kernels, lm-eval, or
+# research utility dependencies. It is only for the lightweight public smoke
+# path documented in README.md and CONTRIBUTING.md.
+PyYAML>=6.0.0
+pytest>=8.3.0

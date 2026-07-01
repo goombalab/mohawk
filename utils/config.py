@@ -220,7 +220,10 @@ def recursive_update(state, u):
         elif isinstance(v, dict):
             state[k] = recursive_update(value or {}, v)
         elif isinstance(v, list):
-            state[k] = (value or []) + v if v[0] is not None else v[1:]
+            if not v:
+                state[k] = []
+            else:
+                state[k] = (value or []) + v if v[0] is not None else v[1:]
         else:
             state[k] = v
     return state

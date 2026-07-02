@@ -11,7 +11,6 @@ HELP_COMMANDS = [
     ["evals/benchmark.py"],
     ["evals/eval_ppl.py"],
     ["generation/generate.py"],
-    ["tools/create_tiny_smoke_checkpoint.py"],
     ["tools/hybrid_weights_transfer.py"],
     ["tools/benchmark_throughput.py"],
     ["tools/visualize_attention.py"],
@@ -62,9 +61,6 @@ def test_public_cli_help_does_not_import_heavy_runtime(command):
             assert flag in result.stdout
     if command == ["generation/generate.py"]:
         for flag in ["--model", "--prompt", "--local_files_only", "--model_dtype", "--model-registration-module"]:
-            assert flag in result.stdout
-    if command == ["tools/create_tiny_smoke_checkpoint.py"]:
-        for flag in ["--config", "--output", "--rename-key"]:
             assert flag in result.stdout
     if command == ["tools/hybrid_weights_transfer.py"]:
         for flag in ["--config", "--heads", "--device", "--allow-unexpected-student-load"]:

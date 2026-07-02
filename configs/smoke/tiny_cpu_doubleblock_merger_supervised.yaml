@@ -1,7 +1,0 @@
-LOAD:
-  - ./configs/smoke/tiny_cpu_doubleblock_attention_base.yaml
-
-SMOKE_NAME: Tiny-CPU-DoubleBlockMerger-Attention-Smoke
-BLOCK_NAME: DoubleBlockMerger
-RUN_DIR: /tmp/mohawk_tiny_doubleblock_merger_cpu_run
-TEACHER_DIR: /tmp/mohawk_tiny_doubleblock_merger_teacher_ckpt

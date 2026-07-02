@@ -1,7 +1,0 @@
-LOAD:
-  - ./configs/smoke/tiny_cpu_doubleblock_discrete_mamba2_ref_base.yaml
-
-SMOKE_NAME: Tiny-CPU-DoubleBlockHymba-DiscreteMamba2-Ref-Smoke
-BLOCK_NAME: DoubleBlockHymba
-RUN_DIR: /tmp/mohawk_tiny_doubleblock_hymba_discrete_mamba2_ref_cpu_run
-TEACHER_DIR: /tmp/mohawk_tiny_doubleblock_hymba_discrete_mamba2_ref_teacher_ckpt

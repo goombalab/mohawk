@@ -1,70 +1,82 @@
 # Contributing to Mohawk
 
-This repository is used for research code and experiments around Mohawk distillation. Contributions are welcome when they improve correctness, reproducibility, or developer usability.
+Contributions are welcome when they improve correctness, reproducibility, or
+developer usability.
 
-## Before You Start
-
-Set up a local environment and confirm imports work:
+## Setup
 
 ```bash
-git clone https://github.com/your-username/mohawk.git
+git clone https://github.com/goombalab/mohawk.git
 cd mohawk
-pip install -r requirements.txt
-python3 -m compileall -q .
+python -m pip install -r requirements.txt
 ```
 
-If your change touches model loading or Hugging Face assets, set `HF_TOKEN` in your shell instead of editing config files with credentials.
+For dependency-light validation only:
 
-## What Makes a Good PR Here
+```bash
+python -m pip install pytest PyYAML
+```
 
-- Solves a concrete problem (bug, missing behavior, poor ergonomics) with minimal unrelated refactoring.
-- Includes updates to docs/config comments when behavior changes.
-- Uses existing architecture/config patterns unless there is a clear reason to introduce a new one.
-- States exactly what was tested and what was not tested.
+Keep credentials such as `HF_TOKEN` and `WANDB_API_KEY` in environment
+variables. Do not commit tokens or machine-specific paths.
 
-## Code and Config Expectations
+## Change Guidelines
 
-- Keep architecture code in `components/`, training flow in `distill/` or `training_wrapper/`, and utilities in `utils/`.
-- Prefer extending existing YAML config composition (`LOAD`) over duplicating large config files.
-- Avoid hardcoding machine-specific paths, tokens, or cluster assumptions.
-- Add assertions/checks when shape or dtype mismatches can silently corrupt training.
+- Keep changes focused on one concrete problem.
+- Follow the existing module and YAML composition patterns.
+- Put model code in `components/`, distillation logic in `distill/`, wrapper
+  behavior in `training_wrapper/`, and shared helpers in `utils/`.
+- Avoid unrelated refactors and generated artifacts.
+- Document user-visible behavior changes.
+- State exactly what was tested and what remains untested.
 
-## Testing Expectations
+## Validation
 
-There is no single full CI pipeline in this repo yet, so include the strongest checks you can run locally:
+Run the dependency-light checks for every change:
 
-1. Syntax/import check:
-   ```bash
-   python3 -m compileall -q .
-   ```
-2. A targeted functional run relevant to your change:
-   - Training path change: run `python run.py --config <config>`
-   - Benchmark path change: run `python evals/benchmark.py --dir <model_dir> --tasks <task_list>`
-   - Generation/util change: run the corresponding script with a minimal input
-3. Include command lines and outcomes in the PR description.
+```bash
+python3 -m compileall -q .
+pytest -q
+```
 
-If you cannot run GPU-dependent validation, say that explicitly.
+Also run a focused command for the behavior you changed. Examples:
 
-## Pull Request Template
+```bash
+# Training
+python run.py --config <config>
 
-Use this structure in your PR body:
+# lm-eval benchmark
+python evals/benchmark.py --dir <checkpoint-or-model> --tasks <tasks>
+
+# Generation
+python generation/generate.py --model <checkpoint-or-model> --prompt <text>
+```
+
+GPU, distributed, remote-data, and optional-kernel changes require an
+appropriate targeted run. If that environment is unavailable, say so in the
+pull request instead of implying coverage.
+
+## Pull Requests
+
+Include:
 
 - **Problem**: what was broken or missing.
-- **Change**: what you implemented.
-- **Risk**: likely failure modes or compatibility concerns.
-- **Validation**: exact commands run and key output.
+- **Change**: what the patch does.
+- **Risk**: compatibility concerns or likely failure modes.
+- **Validation**: commands run and their outcomes.
 
-## Reporting Bugs
+Do not include unrelated formatting, metadata churn, local caches, logs,
+checkpoints, or generated data.
 
-Open an issue with:
+## Bug Reports
 
-- Exact command/config used
-- Full traceback
-- Hardware/software context (GPU, CUDA, torch, transformers versions)
-- Whether the failure is deterministic
+Provide:
 
-Issues without reproducible steps are hard to act on and may be closed until more detail is provided.
+- The exact command and config.
+- The complete traceback.
+- Relevant Python, PyTorch, Transformers, CUDA, and GPU versions.
+- Whether the failure reproduces consistently.
 
 ## License
 
-By contributing, you agree that contributions are licensed under MIT (same as this repo).
+Contributions are licensed under the repository's MIT license.

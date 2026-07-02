@@ -1,147 +1,161 @@
 # Knowledge Distillation for Hybrid Transformer-SSM Models
 
-A PyTorch framework for knowledge distillation from large language models (LLMs) to hybrid architectures that combine Transformer attention mechanisms with State-Space Models (SSM), such as Mamba.
+Mohawk is a PyTorch research framework for distilling language models into
+hybrid architectures that combine Transformer attention with state-space
+models such as Mamba.
 
-## What This Repository Contains
+## Features
 
-- Model building blocks for Llama, Qwen2, Falcon, and Phi-style hybrids.
-- A composable YAML config system (`LOAD`-based inheritance).
-- Distillation objectives: `supervised`, `hstates`, `matrices`, and `dpo`.
-- Distributed training wrappers (DDP/FSDP/centralized).
-- Evaluation utilities for perplexity and lm-eval-harness tasks.
+- Llama, Qwen2, Falcon, and Phi-style hybrid model components.
+- YAML configuration with `LOAD`-based composition.
+- Supervised, hidden-state, matrix, and DPO distillation objectives.
+- Centralized, DDP, and FSDP training wrappers.
+- Perplexity, lm-eval-harness, generation, and analysis utilities.
 
-This is not a packaged library. You run scripts directly from the repo.
+This repository is run directly from source; it is not a packaged library.
 
 ## Setup
 
-### Requirements
-
-- Python 3.8+
-- PyTorch 2.1+ with CUDA
-- One or more NVIDIA GPUs for training/eval
-
-### Install
-
 ```bash
-git clone https://github.com/avivbick/mohawk.git
+git clone https://github.com/goombalab/mohawk.git
 cd mohawk
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
-Optional accelerators:
+The default requirements cover the Python training and evaluation runtime.
+CUDA-built SSM kernels are optional:
 
 ```bash
-pip install flash-attn --no-build-isolation
+python -m pip install --no-build-isolation -r requirements-ssm-cuda.txt
 ```
 
-### Environment Variables
-
-Use environment variables for credentials instead of hardcoding:
-
-- `HF_TOKEN` for private/gated Hugging Face models
-- `WANDB_API_KEY` for experiment tracking
-- `CUDA_VISIBLE_DEVICES` to pin GPUs
-
-Global runtime defaults live in `configs/management.yaml`.
-
-## Quick Start
-
-### Single-GPU Training
+Those kernels require a compatible CUDA toolkit and compiler. Flash Attention
+is also optional:
 
 ```bash
-python run.py --config configs/Qwen2/1.5B/hybrid/adapter.yaml
+python -m pip install flash-attn --no-build-isolation
 ```
 
-### Multi-GPU Training
+For a dependency-light checkout validation:
 
 ```bash
-torchrun --standalone --nproc_per_node=8 run.py \
+python -m pip install pytest PyYAML
+python run.py --help
+python evals/benchmark.py --help
+python generation/generate.py --help
+python3 -m compileall -q .
+pytest -q
+```
+
+Use environment variables for credentials and runtime selection:
+
+- `HF_TOKEN` for private or gated Hugging Face assets.
+- `WANDB_API_KEY` for online experiment tracking.
+- `WANDB_MODE=disabled` to disable W&B logging.
+- `CUDA_VISIBLE_DEVICES` to select GPUs.
+
+## Training
+
+Single process:
+
+```bash
+WANDB_MODE=disabled python run.py \
   --config configs/Qwen2/1.5B/hybrid/adapter.yaml
 ```
 
-`--config` also accepts a comma-separated list; configs are loaded and run sequentially.
-
-## How Configuration Works
-
-Every run is driven by YAML. The important top-level sections are:
-
-- `ComponentsConfig`: architecture definition (block sequence and layer types)
-- `TrainConfig`: optimization schedule and training length
-- `DistillConfig`: objective selection and logging run name
-- `TeacherConfig`: teacher checkpoint/path and tokenizer context
-- `TrainDataConfig`: dataset source and loader strategy
-- `LoadConfig`: initialization and checkpoint loading rules
-- `ManagementConfig`: cache paths, W&B config, environment defaults
-
-Useful starting points:
-
-- `configs/Qwen2/1.5B/hybrid/adapter.yaml`
-- `configs/Llama/1B/hybrid/mohawk_8.yaml`
-- `configs/Llama/8B/bases/_supervised.yaml`
-
-## Evaluation and Analysis
-
-### Perplexity
-
-Perplexity is integrated through training/eval wrappers and `evals/eval_ppl.py` implements the evaluator class used by those wrappers.
-
-### lm-eval-harness Benchmarks
+Distributed:
 
 ```bash
-python evals/benchmark.py --dir <checkpoint_or_hf_model_dir> --tasks mmlu
+WANDB_MODE=disabled torchrun --standalone --nproc_per_node=8 run.py \
+  --config configs/Qwen2/1.5B/hybrid/adapter.yaml
 ```
 
-`--tasks` is a comma-separated list, for example:
-`arc_challenge,arc_easy,piqa,winogrande,hellaswag,mmlu`.
+Research configs may contain placeholder checkpoint or dataset paths. Review
+the selected config and its `LOAD` chain before launching a run.
 
-## Utility Scripts
+The main configuration sections are:
 
-- `tools/hybrid_weights_transfer.py`
-  Copies selected attention heads from a teacher to a hybrid student. Uses `--config` and expects a supported `TeacherConfig.dir`.
+- `ComponentsConfig`: model architecture and layer types.
+- `TrainConfig`: optimizer, precision, schedule, and training length.
+- `DistillConfig`: objective and run metadata.
+- `TeacherConfig`: teacher model and tokenizer.
+- `TrainDataConfig`: dataset and loader pipeline.
+- `LoadConfig`: checkpoint initialization rules.
+- `ManagementConfig`: paths, caches, and logging.
 
-- `tools/benchmark_throughput.py`
-  CUDA-graph throughput microbenchmark. This script is research-oriented and currently contains model-specific assumptions and hardcoded defaults.
+## Evaluation
 
-- `tools/visualize_attention.py`
-  Produces attention heatmaps for manually selected heads on a fixed example. Useful for qualitative inspection, not automated evaluation.
+Run lm-eval-harness tasks against a Mohawk checkpoint or Hugging Face model:
 
-- `generation/generate.py`
-  Inference/sampling script with timing output.
+```bash
+python evals/benchmark.py \
+  --dir <checkpoint-or-model> \
+  --tasks arc_easy,piqa \
+  --batch_size 1
+```
+
+Run a perplexity smoke through the repository's evaluator:
+
+```bash
+python evals/eval_ppl.py \
+  --model <checkpoint-or-model> \
+  --backend auto \
+  --n_batches 1
+```
+
+Both commands support local-cache-only operation with `--local_files_only`.
+Custom Transformers implementations can be registered with repeated
+`--model-registration-module <module>` options.
+
+## Generation
+
+```bash
+python generation/generate.py \
+  --model <checkpoint-or-model> \
+  --prompt "The future of language models is" \
+  --genlen 32
+```
+
+## Utilities
+
+- `tools/hybrid_weights_transfer.py`: transfer selected teacher weights into a
+  hybrid student.
+- `tools/benchmark_throughput.py`: measure model prefill and decode throughput.
+- `tools/visualize_attention.py`: render attention heatmaps.
 
 ## Repository Layout
 
 ```text
-mohawk/
-├── components/          # Blocks, mixers, LM heads
-├── configs/             # Train/eval architecture recipes
-├── dataloaders/         # Dataset generators and wrappers
-├── distill/             # Run orchestration and objective steps
-├── evals/               # Evaluation entrypoints and adapters
-├── external_models/     # External model definitions integrated here
-├── generation/          # Text generation utilities
-├── training_wrapper/    # DDP/FSDP/centralized wrappers
-├── utils/               # Config, logging, init, distributed helpers
-└── run.py               # Main training entrypoint
+components/          Model blocks, mixers, and heads
+configs/             Architecture and training recipes
+dataloaders/         Dataset and batching pipelines
+distill/             Distillation objectives and orchestration
+evals/               Evaluation entry points and adapters
+external_models/     Integrated external model definitions
+generation/          Text generation tools
+training_wrapper/    Centralized, DDP, and FSDP wrappers
+utils/               Configuration, initialization, and runtime helpers
+run.py               Training entry point
 ```
 
 ## Publications
 
-This codebase was used in the following research publications:
-
 ### Retrieval-Aware Distillation for Transformer-SSM Hybrids
+
 ```bibtex
 @misc{bick2026retrieval,
-      title={Retrieval-Aware Distillation for Transformer-SSM Hybrids}, 
+      title={Retrieval-Aware Distillation for Transformer-SSM Hybrids},
       author={Aviv Bick and Eric P. Xing and Albert Gu},
       year={2026},
       eprint={2602.11374},
       archivePrefix={arXiv},
       primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2602.11374}, 
+      url={https://arxiv.org/abs/2602.11374},
 }
 ```
 
 ### Llamba: Scaling Distilled Recurrent Models for Efficient Language Processing
+
 ```bibtex
 @article{bick2025llamba,
   title={Llamba: Scaling distilled recurrent models for efficient language processing},
@@ -152,48 +166,48 @@ This codebase was used in the following research publications:
 ```
 
 ### Thinking Slow, Fast: Scaling Inference Compute with Distilled Reasoners
+
 ```bibtex
 @misc{paliotta2025thinking,
-      title={Thinking Slow, Fast: Scaling Inference Compute with Distilled Reasoners}, 
+      title={Thinking Slow, Fast: Scaling Inference Compute with Distilled Reasoners},
       author={Daniele Paliotta and Junxiong Wang and Matteo Pagliardini and Kevin Y. Li and Aviv Bick and J. Zico Kolter and Albert Gu and François Fleuret and Tri Dao},
       year={2025},
       eprint={2502.20339},
       archivePrefix={arXiv},
       primaryClass={cs.CL},
-      url={https://arxiv.org/abs/2502.20339}, 
+      url={https://arxiv.org/abs/2502.20339},
 }
 ```
 
 ### Transformers to SSMs: Distilling Quadratic Knowledge to Subquadratic Models (Mohawk)
+
 ```bibtex
 @misc{mohawk,
-      title={Transformers to SSMs: Distilling Quadratic Knowledge to Subquadratic Models}, 
+      title={Transformers to SSMs: Distilling Quadratic Knowledge to Subquadratic Models},
       author={Aviv Bick and Kevin Y. Li and Eric P. Xing and J. Zico Kolter and Albert Gu},
       year={2025},
       eprint={2408.10189},
       archivePrefix={arXiv},
       primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2408.10189}, 
+      url={https://arxiv.org/abs/2408.10189},
 }
 ```
 
 ## Citation
-
-If this repository is useful in your work, cite:
 
 ```bibtex
 @software{mohawk,
   title = {Knowledge Distillation for Hybrid Transformer-SSM Models},
   author = {Aviv Bick},
   year = {2024},
-  url = {https://github.com/avivbick/mohawk}
+  url = {https://github.com/goombalab/mohawk}
 }
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
 MIT. See [LICENSE](LICENSE).
-
-## Contributing
-
-Contribution workflow and expectations are documented in [CONTRIBUTING.md](CONTRIBUTING.md).
